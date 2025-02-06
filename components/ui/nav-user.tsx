@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { LogOut, Settings, User } from "lucide-react"
+import { LogIn, LogOut, Settings, User } from "lucide-react"
 import { ModeToggle } from "@/components/theme/mode-toggle"
 
 import {
@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/sidebar"
 import Image from "next/image"
 import { Button } from "./button"
-import { signOut } from "@/lib/auth-client"
+import { signOut, useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface NavUserProps {
 	user: {
@@ -31,6 +32,7 @@ interface NavUserProps {
 }
 
 export function NavUser({ user }: NavUserProps) {
+	const { data: session } = useSession()
 	const router = useRouter()
 	const { isMobile } = useSidebar()
 
@@ -84,21 +86,29 @@ export function NavUser({ user }: NavUserProps) {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem>
-					<Button
-						onClick={async () => {
-							await signOut({
-								fetchOptions: {
-									onSuccess: () => {
-										router.push("/")
+					{session ? (
+						<Button
+							variant={"ghost"}
+							onClick={async () => {
+								await signOut({
+									fetchOptions: {
+										onSuccess: () => {
+											router.push("/")
+										},
 									},
-								},
-							})
-						}}
-						variant={"ghost"}
-					>
-						<LogOut className="mr-2 size-4" />
-						Log out
-					</Button>
+								})
+							}}
+						>
+							<LogOut className="mr-2 size-4" />
+							Log out
+						</Button>
+					) : (
+						<Button variant={"ghost"} asChild>
+							<Link href={"/auth/signin"}>
+								<LogIn /> Log in
+							</Link>
+						</Button>
+					)}
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
