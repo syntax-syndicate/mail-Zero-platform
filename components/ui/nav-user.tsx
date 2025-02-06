@@ -18,6 +18,9 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar"
 import Image from "next/image"
+import { Button } from "./button"
+import { signOut } from "@/lib/auth-client"
+import { useRouter } from "next/navigation"
 
 interface NavUserProps {
 	user: {
@@ -28,6 +31,7 @@ interface NavUserProps {
 }
 
 export function NavUser({ user }: NavUserProps) {
+	const router = useRouter()
 	const { isMobile } = useSidebar()
 
 	return (
@@ -80,8 +84,21 @@ export function NavUser({ user }: NavUserProps) {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem>
-					<LogOut className="mr-2 size-4" />
-					Log out
+					<Button
+						onClick={async () => {
+							await signOut({
+								fetchOptions: {
+									onSuccess: () => {
+										router.push("/")
+									},
+								},
+							})
+						}}
+						variant={"ghost"}
+					>
+						<LogOut className="mr-2 size-4" />
+						Log out
+					</Button>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
