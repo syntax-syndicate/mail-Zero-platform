@@ -11,17 +11,18 @@ export default async function MailPage() {
 	const defaultLayout = layout ? JSON.parse(layout.value) : undefined
 	const defaultCollapsed = collapsed ? JSON.parse(collapsed.value) : undefined
 
-	return (
-		<div className="bg-white dark:bg-background">
-			<div className="hidden flex-col md:flex dark:text-gray-100">
-				<Mail
-					accounts={accounts}
-					mails={mails}
-					defaultLayout={defaultLayout}
-					defaultCollapsed={defaultCollapsed}
-					navCollapsedSize={4}
-				/>
-			</div>
-		</div>
-	)
+  
+  return (
+    <div className="bg-white dark:bg-background">
+      <div className="flex-col flex dark:text-gray-100">
+        <Mail
+          accounts={accounts}
+          mails={mails}
+          defaultLayout={defaultLayout}
+          defaultCollapsed={defaultCollapsed}
+          navCollapsedSize={4}
+        />
+      </div>
+    </div>
+  );
 }
