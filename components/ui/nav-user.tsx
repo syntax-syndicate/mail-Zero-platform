@@ -23,15 +23,7 @@ import { signOut, useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-interface NavUserProps {
-	user: {
-		name: string
-		email: string
-		image: string
-	}
-}
-
-export function NavUser({ user }: NavUserProps) {
+export function NavUser() {
 	const { data: session } = useSession()
 	const router = useRouter()
 	const { isMobile } = useSidebar()
@@ -40,24 +32,36 @@ export function NavUser({ user }: NavUserProps) {
 		<DropdownMenu>
 			<SidebarMenu>
 				<SidebarMenuItem>
-					<DropdownMenuTrigger asChild>
+					{session ? (
+						<DropdownMenuTrigger asChild>
+							<SidebarMenuButton
+								size="lg"
+								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+							>
+								<Image
+									src={session.user.image || "/placeholder.svg"}
+									alt={session.user.name}
+									className="size-8 rounded-lg shrink-0"
+									width={32}
+									height={32}
+								/>
+								<div className="flex flex-col gap-1 leading-none ml-1 min-w-0">
+									<span className="font-semibold">{session.user.name}</span>
+									<span className="truncate">{session.user.email}</span>
+								</div>
+							</SidebarMenuButton>
+						</DropdownMenuTrigger>
+					) : (
 						<SidebarMenuButton
 							size="lg"
 							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+							asChild
 						>
-							<Image
-								src={user.image || "/placeholder.svg"}
-								alt={user.name}
-								className="size-8 rounded-lg shrink-0"
-								width={32}
-								height={32}
-							/>
-							<div className="flex flex-col gap-1 leading-none ml-1 min-w-0">
-								<span className="font-semibold">{user.name}</span>
-								<span className="truncate">{user.email}</span>
-							</div>
+							<Link href={"/auth/signin"}>
+								<LogIn /> Log in
+							</Link>
 						</SidebarMenuButton>
-					</DropdownMenuTrigger>
+					)}
 				</SidebarMenuItem>
 			</SidebarMenu>
 			<DropdownMenuContent
@@ -86,29 +90,21 @@ export function NavUser({ user }: NavUserProps) {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem>
-					{session ? (
-						<Button
-							variant={"ghost"}
-							onClick={async () => {
-								await signOut({
-									fetchOptions: {
-										onSuccess: () => {
-											router.push("/")
-										},
+					<Button
+						variant={"ghost"}
+						onClick={async () => {
+							await signOut({
+								fetchOptions: {
+									onSuccess: () => {
+										router.push("/")
 									},
-								})
-							}}
-						>
-							<LogOut className="mr-2 size-4" />
-							Log out
-						</Button>
-					) : (
-						<Button variant={"ghost"} asChild>
-							<Link href={"/auth/signin"}>
-								<LogIn /> Log in
-							</Link>
-						</Button>
-					)}
+								},
+							})
+						}}
+					>
+						<LogOut className="mr-2 size-4" />
+						Log out
+					</Button>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

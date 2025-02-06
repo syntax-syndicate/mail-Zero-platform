@@ -20,19 +20,18 @@ import { Gmail, Outlook, Vercel } from "@/components/icons/icons"
 import { Button } from "@/components/ui/button"
 
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui/sidebar";
-import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
-import { AccountSwitcher } from "./account-switcher";
-import { MailCompose } from "../mail/mail-compose";
-import { useSidebar } from "@/components/ui/sidebar";
-import { SidebarToggle } from "./sidebar-toggle";
-import { useSession } from "@/lib/auth-client"
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarHeader,
+	SidebarRail,
+} from "@/components/ui/sidebar"
+import { NavMain } from "./nav-main"
+import { NavUser } from "./nav-user"
+import { AccountSwitcher } from "./account-switcher"
+import { MailCompose } from "../mail/mail-compose"
+import { useSidebar } from "@/components/ui/sidebar"
+import { SidebarToggle } from "./sidebar-toggle"
 
 // This is sample data that matches the screenshot
 
@@ -153,44 +152,34 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const { data: session } = useSession()
-  const [composeOpen, setComposeOpen] = React.useState(false);
-  const { isMobile } = useSidebar();
-        
-	const userProps = session
-		? {
-				name: session.user.name!,
-				email: session.user.email!,
-				image: session.user.image!,
-		  }
-		: {
-				name: data.user.name,
-				email: data.user.email,
-				image: data.user.avatar,
-		  }
+	const [composeOpen, setComposeOpen] = React.useState(false)
+	const { isMobile } = useSidebar()
 
-  return (
-    <>
-      {isMobile && (
-        <SidebarToggle className="fixed left-4 top-4 z-40 md:hidden" />
-      )}
-      <Sidebar collapsible="icon" {...props}>
-        <SidebarHeader>
-          <AccountSwitcher accounts={data.accounts} />
-        </SidebarHeader>
-        <SidebarContent>
-          <Button className="w-fit mt-2 mx-3.5" onClick={() => setComposeOpen(true)}>
-            <Pencil className="size-4" />
-            Compose
-          </Button>
-          <NavMain items={data.navMain} />
-        </SidebarContent>
-        <SidebarFooter>
-          <NavUser user={userProps} />
-        </SidebarFooter>
-        <SidebarRail />
-        <MailCompose open={composeOpen} onClose={() => setComposeOpen(false)} />
-      </Sidebar>
-    </>
-  );
+	return (
+		<>
+			{isMobile && (
+				<SidebarToggle className="fixed left-4 top-4 z-40 md:hidden" />
+			)}
+			<Sidebar collapsible="icon" {...props}>
+				<SidebarHeader>
+					<AccountSwitcher accounts={data.accounts} />
+				</SidebarHeader>
+				<SidebarContent>
+					<Button
+						className="w-fit mt-2 mx-3.5"
+						onClick={() => setComposeOpen(true)}
+					>
+						<Pencil className="size-4" />
+						Compose
+					</Button>
+					<NavMain items={data.navMain} />
+				</SidebarContent>
+				<SidebarFooter>
+					<NavUser />
+				</SidebarFooter>
+				<SidebarRail />
+				<MailCompose open={composeOpen} onClose={() => setComposeOpen(false)} />
+			</Sidebar>
+		</>
+	)
 }
