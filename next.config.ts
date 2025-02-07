@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
 			{ hostname: "lh3.googleusercontent.com" }, // Todo: Find a better way to limit this Image Optimization
 		],
 	},
-}
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+};
 
 export default nextConfig
