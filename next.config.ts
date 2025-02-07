@@ -1,11 +1,11 @@
-import type { NextConfig } from "next"
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-	images: {
-		remotePatterns: [
-			{ hostname: "lh3.googleusercontent.com" }, // Todo: Find a better way to limit this Image Optimization
-		],
-	},
+  images: {
+    remotePatterns: [
+      { hostname: "lh3.googleusercontent.com" }, // Todo: Find a better way to limit this Image Optimization
+    ],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -14,4 +14,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig
+export default nextConfig;
