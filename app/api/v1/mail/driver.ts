@@ -2,6 +2,8 @@ import { ParsedMessage } from "@/types";
 import { google } from "googleapis";
 import * as he from "he";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 interface MailManager {
   get(id: string): Promise<any>;
   create(data: any): Promise<any>;

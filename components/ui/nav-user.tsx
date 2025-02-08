@@ -1,7 +1,6 @@
 "use client";
 
-import { DoorOpenIcon, LogOut, Settings, User, ChevronDown } from "lucide-react";
-import { ModeToggle } from "@/components/theme/mode-toggle";
+import { ChevronDown } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -15,15 +14,9 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { signIn, signOut, useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Gmail } from "../icons/icons";
 import { Button } from "./button";
 import Image from "next/image";
 

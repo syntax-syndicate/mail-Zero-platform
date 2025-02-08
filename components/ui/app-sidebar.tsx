@@ -17,19 +17,8 @@ import {
   SquarePen,
   Search,
 } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
 import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
-import { Gmail, Outlook, Vercel } from "@/components/icons/icons";
-import { MailCompose } from "../mail/mail-compose";
 import React, { Suspense } from "react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";

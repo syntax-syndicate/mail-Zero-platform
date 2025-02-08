@@ -51,6 +51,7 @@ export function Mail({ mails }: MailProps) {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filterValue, setFilterValue] = useState<"all" | "unread">("all");
 
   // Check if we're on mobile on mount and when window resizes
