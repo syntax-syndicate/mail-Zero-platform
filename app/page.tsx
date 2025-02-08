@@ -50,7 +50,7 @@ export default function BetaSignup() {
               htmlFor="email"
               className="block text-xs uppercase text-gray-600 dark:text-zinc-400"
             >
-              Email Address
+              Email
             </label>
             <input
               id="email"
