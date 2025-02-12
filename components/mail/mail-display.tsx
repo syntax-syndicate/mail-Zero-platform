@@ -12,6 +12,8 @@ import {
   Send,
   FileIcon,
   Copy,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { format } from "date-fns/format";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [isUploading, setIsUploading] = useState(false);
   const { data: emailData, isLoading } = useThread(mail || "");
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (emailData) {
@@ -119,7 +122,13 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className={cn("flex h-full flex-col", isMobile ? "" : "rounded-r-lg pt-[6px]")}>
+      <div
+        className={cn(
+          "flex h-full flex-col transition-all duration-300",
+          isMobile ? "" : "rounded-r-lg pt-[6px]",
+          isFullscreen ? "fixed inset-0 z-50 bg-background" : "",
+        )}
+      >
         <div className="sticky top-0 z-20 flex items-center gap-2 border-b bg-background/95 px-4 pb-[7.5px] pt-[0.5px] backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex flex-1 items-center gap-2">
             {!isMobile && (
@@ -143,6 +152,28 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="md:h-fit md:px-2"
+                  disabled={!emailData}
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              </TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -200,8 +231,10 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
           </div>
         </div>
 
-        <div className="relative flex-1 overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto pb-[calc(120px+2rem)]">
+        <div
+          className={cn("relative flex-1 overflow-hidden", isFullscreen && "h-[calc(100vh-4rem)]")}
+        >
+          <div className="relative inset-0 h-full overflow-y-auto pb-0">
             <div className="flex flex-col gap-4 px-4 py-4">
               <div className="flex items-start gap-3">
                 <Avatar>
@@ -254,8 +287,10 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-10 bg-background px-4 pb-4 pt-2">
+        {!isFullscreen && (
+          <div className="relative bottom-0 left-0 right-0 z-10 bg-background px-4 pb-4 pt-2">
             <form className="relative space-y-2.5 rounded-[calc(var(--radius)-2px)] border bg-secondary/50 p-4 shadow-sm">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -379,7 +414,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
               </div>
             </form>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
