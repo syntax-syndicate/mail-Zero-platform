@@ -12,10 +12,10 @@ export default function Navbar() {
 
       {/* Desktop Navigation */}
       <div className="hidden gap-10 text-sm text-muted-foreground md:flex">
-        <Link href="https://github.com/mail0-dev/mail0">Github</Link>
-        <Link href="https://discord.gg/mail0">Discord</Link>
+        <Link href="https://github.com/nizzyabi/Mail0">Github</Link>
+        <Link href=" https://discord.gg/5nwrvt3JH2">Discord</Link>
         <Link href="/about">About</Link>
-        <Link href="/contact">Contact</Link>
+        <Link href="/privacy">Terms & Privacy</Link>
       </div>
 
       {/* Mobile Navigation */}
@@ -32,15 +32,15 @@ export default function Navbar() {
             </SheetHeader>
             <div className="mt-7 flex flex-col gap-3 text-muted-foreground">
               <Link href="https://github.com/nizzyabi/mail0">Github</Link>
-              <Link href="https://discord.gg/mail0">Discord</Link>
+              <Link href="https://discord.gg/5nwrvt3JH2">Discord</Link>
               <Link href="/about">About</Link>
-              <Link href="/contact">Contact</Link>
+              <Link href="/privacy">Terms & Privacy</Link>
             </div>
           </SheetContent>
         </Sheet>
       </div>
 
-      <div className="hidden w-[180px] justify-end md:flex">
+      <Link href="/login" className="hidden w-[180px] justify-end md:flex">
         <Button variant="main" className="group h-9">
           Developers start here
           <svg
@@ -59,7 +59,7 @@ export default function Navbar() {
             <path d="m12 5 7 7-7 7" />
           </svg>
         </Button>
-      </div>
+      </Link>
     </div>
   );
 }

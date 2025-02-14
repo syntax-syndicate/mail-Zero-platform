@@ -76,6 +76,39 @@ export default {
         sans: ["Geist", ...defaultTheme.fontFamily.sans],
         mono: ["Geist_Mono", ...defaultTheme.fontFamily.mono],
       },
+      keyframes: {
+        "fade-up": {
+          "0%": {
+            transform: "translateY(10px)",
+          },
+          "100%": {
+            transform: "translateY(0)",
+          },
+        },
+        moveUp: {
+          "0%": {
+            transform: "translateY(90px)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "translateY(0)",
+            opacity: "1",
+          },
+        },
+        fadeIn: {
+          "0%": {
+            opacity: "0",
+          },
+          "100%": {
+            opacity: "1",
+          },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "move-up": "moveUp 3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in": "fadeIn 3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+      },
     },
   },
   plugins: [

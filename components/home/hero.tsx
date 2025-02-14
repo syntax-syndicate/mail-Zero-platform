@@ -72,7 +72,7 @@ export default function Hero() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl pt-14 md:pt-28">
+    <div className="mx-auto w-full max-w-2xl animate-fade-in pt-20 md:pt-20">
       <Balancer className="text-center text-5xl font-medium sm:text-7xl">
         Your open source Gmail alternative
       </Balancer>
