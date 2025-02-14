@@ -81,7 +81,7 @@ export default function Hero() {
         platform built for everyone.
       </Balancer>
 
-      <Card className="mt-3 w-full border-none shadow-none">
+      <Card className="mt-3 w-full border-none bg-transparent shadow-none">
         <CardContent className="px-0">
           <Form {...form}>
             <form
