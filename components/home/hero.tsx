@@ -1,14 +1,14 @@
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Discord, GitHub, Twitter, YouTube } from "../icons/icons";
+"use client";
+
+import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Card, CardContent } from "../ui/card";
 import Balancer from "react-wrap-balancer";
 import { useForm } from "react-hook-form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { z } from "zod";
 
 const betaSignupSchema = z.object({
