@@ -1,8 +1,15 @@
 "use client";
 
-import { AlignVerticalSpaceAround, ArchiveX, BellOff, Check, ListFilter, X } from "lucide-react";
-
-import { useState, useCallback, useMemo, useEffect, ReactNode, Suspense, useRef } from "react";
+import {
+  AlignVerticalSpaceAround,
+  ArchiveX,
+  BellOff,
+  Check,
+  ListFilter,
+  SquarePen,
+  X,
+} from "lucide-react";
+import { useState, useCallback, useMemo, useEffect, ReactNode, Suspense } from "react";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { MailDisplay } from "@/components/mail/mail-display";
@@ -30,7 +37,6 @@ import { useThreads } from "@/hooks/use-threads";
 import { SearchBar } from "./search-bar";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { SquarePenIcon, SquarePenIconHandle } from "../icons/animated/square-pen";
 
 interface MailProps {
   accounts: {
@@ -253,17 +259,9 @@ export function Mail({ folder }: MailProps) {
 
 function ComposeButton() {
   const { open } = useOpenComposeModal();
-  const penRef = useRef<SquarePenIconHandle>(null);
-
   return (
-    <Button
-      onClick={open}
-      variant="ghost"
-      className="h-fit px-2"
-      onMouseEnter={() => penRef.current?.startAnimation()}
-      onMouseLeave={() => penRef.current?.stopAnimation()}
-    >
-      <SquarePenIcon ref={penRef} />
+    <Button onClick={open} variant="ghost" className="h-fit px-2">
+      <SquarePen />
     </Button>
   );
 }
