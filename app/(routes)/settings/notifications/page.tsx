@@ -66,7 +66,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="max-w-2xl border-none">
       <CardHeader>
         <CardTitle>Notifications</CardTitle>
         <CardDescription>Choose what notifications you want to receive.</CardDescription>

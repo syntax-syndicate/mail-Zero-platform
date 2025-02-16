@@ -69,7 +69,7 @@ export default function GeneralPage() {
   }
 
   return (
-    <Card className="w-full max-w-2xl">
+    <Card className="w-full max-w-2xl border-none">
       <CardHeader>
         <CardTitle className="">General </CardTitle>
         <CardDescription>

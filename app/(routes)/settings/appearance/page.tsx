@@ -40,7 +40,7 @@ export default function AppearancePage() {
   }
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="max-w-2xl border-none">
       <CardHeader>
         <CardTitle>Appearance</CardTitle>
         <CardDescription>Customize colors, fonts and view options.</CardDescription>

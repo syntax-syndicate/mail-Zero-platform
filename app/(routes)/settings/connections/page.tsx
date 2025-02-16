@@ -53,7 +53,7 @@ export default function ConnectionsPage() {
   ];
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="max-w-2xl border-none">
       <CardHeader>
         <CardTitle>Connections</CardTitle>
         <CardDescription>Connect your emails to your Mail0 account.</CardDescription>
