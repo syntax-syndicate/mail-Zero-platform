@@ -2,8 +2,8 @@
 
 import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
 import { SquarePenIcon, SquarePenIconHandle } from "../icons/animated/square-pen";
+import { SidebarThemeSwitch } from "../theme/sidebar-theme-switcher";
 import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
-import { SidebarThemeSwitch } from "./sidebar-theme-switch";
 import React, { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { navigationConfig } from "@/config/navigation";
