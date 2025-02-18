@@ -14,7 +14,7 @@ const resend = env.RESEND_API_KEY
 
 const options = {
   database: prismaAdapter(db, {
-    provider: "sqlite",
+    provider: "postgresql",
   }),
   advanced: {
     ipAddress: {
