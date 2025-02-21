@@ -11,7 +11,6 @@ import React, { useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { $fetch } from "@/lib/auth-client";
 import { BASE_URL } from "@/lib/constants";
-import { useTheme } from "next-themes";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { Button } from "./button";
@@ -25,7 +24,6 @@ const fetchStats = async () => {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: stats } = useSWR<number[]>("/api/v1/mail/count", fetchStats);
   const pathname = usePathname();
-  const { theme } = useTheme();
 
   const { currentSection, navItems } = useMemo(() => {
     // Find which section we're in based on the pathname
