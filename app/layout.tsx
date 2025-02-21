@@ -29,11 +29,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
+      {/* <head>
         {env.NODE_ENV === "development" && (
           <Script src="https://unpkg.com/react-scan/dist/auto.global.js"></Script>
         )}
-      </head>
+      </head> */}
       <body className={cn(geistSans.variable, geistMono.variable, "antialiased")}>
         <Providers attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <Suspense>
