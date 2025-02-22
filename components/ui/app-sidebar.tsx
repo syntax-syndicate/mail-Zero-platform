@@ -82,20 +82,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarContent>
       </div>
 
-      <div className="mb-4 mt-auto pl-1.5">
+      <div className="mb-4 mt-auto pl-2">
         <Image
           src="/black-icon.svg"
           alt="Mail0 Logo"
-          width={28}
-          height={28}
-          className="dark:hidden"
-        />
-        <Image
-          src="/white-icon.svg"
-          alt="Mail0 Logo"
-          width={28}
-          height={28}
-          className="hidden dark:block"
+          width={32}
+          height={32}
+          className="dark:invert"
         />
       </div>
     </Sidebar>

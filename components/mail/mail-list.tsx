@@ -4,16 +4,20 @@ import { preloadThread, useMarkAsRead } from "@/hooks/use-threads";
 import { useSearchValue } from "@/hooks/use-search-value";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useKeyPressed } from "@/hooks/use-key-pressed";
+import { EmailViewToggle } from "./email-view-toggle";
 import { useMail } from "@/components/mail/use-mail";
 import { useSession } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
+import { MailKanban } from "./mail-kanban";
 import { InitialThread } from "@/types";
 
 interface MailListProps {
   items: InitialThread[];
   isCompact?: boolean;
   folder: string;
+  viewMode: "list" | "kanban";
+  onViewModeChange: (mode: "list" | "kanban") => void;
 }
 
 const HOVER_DELAY = 300; // ms before prefetching
@@ -181,7 +185,7 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
   );
 };
 
-export function MailList({ items, isCompact, folder }: MailListProps) {
+export function MailList({ items, isCompact, folder, viewMode, onViewModeChange }: MailListProps) {
   const [mail, setMail] = useMail();
   const { data: session } = useSession();
 
@@ -241,25 +245,25 @@ export function MailList({ items, isCompact, folder }: MailListProps) {
   }
 
   return (
-    <ScrollArea className="h-full" type="scroll">
-      <div
-        className={cn(
-          "flex flex-col gap-1.5",
-          // Prevents accidental text selection while in range select mode.
-          selectMode === "range" && "select-none",
-        )}
-      >
-        {items.map((item) => (
-          <Thread
-            key={item.id}
-            message={item}
-            selectMode={selectMode}
-            onSelect={handleMailClick}
-            isCompact={isCompact}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="flex h-full flex-col">
+      {viewMode === "list" ? (
+        <ScrollArea className="h-full" type="scroll">
+          <div className={cn("flex flex-col gap-1.5", selectMode === "range" && "select-none")}>
+            {items.map((item) => (
+              <Thread
+                key={item.id}
+                message={item}
+                selectMode={selectMode}
+                onSelect={handleMailClick}
+                isCompact={isCompact}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      ) : (
+        <MailKanban items={items} onMailClick={handleMailClick} />
+      )}
+    </div>
   );
 }
 

@@ -23,6 +23,7 @@ import { ThreadDisplay } from "@/components/mail/thread-display";
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useSearchValue } from "@/hooks/use-search-value";
 import { MailList } from "@/components/mail/mail-list";
+import { EmailViewToggle } from "./email-view-toggle";
 import { useMail } from "@/components/mail/use-mail";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { SearchBar } from "./search-bar";
+import { idb } from "@/lib/idb";
 
 interface MailProps {
   accounts: {
@@ -49,6 +51,7 @@ interface MailProps {
 
 export function Mail({ folder }: MailProps) {
   const [searchMode, setSearchMode] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   const [searchValue] = useSearchValue();
   const [mail, setMail] = useMail();
   const [isCompact, setIsCompact] = useState(false);
@@ -57,6 +60,8 @@ export function Mail({ folder }: MailProps) {
   const [filterValue, setFilterValue] = useState<"all" | "unread">("all");
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const [isClient, setIsClient] = useState(false);
+  const [isViewPreferenceLoaded, setIsViewPreferenceLoaded] = useState(false);
 
   useEffect(() => {
     if (!session?.user && !isPending) {
@@ -124,6 +129,34 @@ export function Mail({ folder }: MailProps) {
     setOpen(false);
     setMail((mail) => ({ ...mail, selected: null }));
   }, [setMail]);
+
+  // Load view preference
+  useEffect(() => {
+    async function loadViewPreference() {
+      try {
+        const savedPref = await idb.preferences.get("viewMode");
+        if (savedPref) {
+          setViewMode(savedPref.value);
+        }
+        setIsViewPreferenceLoaded(true);
+      } catch (error) {
+        console.error("Error loading view preference:", error);
+        setIsViewPreferenceLoaded(true); // Still set to true so we can show default view
+      }
+    }
+    setIsClient(true);
+    loadViewPreference();
+  }, []);
+
+  const handleViewChange = async (newView: "list" | "kanban") => {
+    setViewMode(newView);
+    if (isClient) {
+      await idb.preferences.put({ id: "viewMode", value: newView });
+    }
+  };
+
+  // Show loading state until both view preference and data are loaded
+  const isInitializing = !isViewPreferenceLoaded || isLoading || isTransitioning;
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -193,34 +226,20 @@ export function Mail({ folder }: MailProps) {
                             className="md:h-fit md:px-2"
                             onClick={() => setSearchMode(true)}
                           >
-                            <SearchIcon />
+                            <SearchIcon className="h-4 w-4 hover:opacity-100" />
                           </Button>
+                          {isClient && (
+                            <EmailViewToggle view={viewMode} onChange={handleViewChange} />
+                          )}
                         </div>
                       </>
                     )}
                   </>
                 )}
-                {mail.bulkSelected.length === 0 && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="md:h-fit md:px-2">
-                        <ListFilter className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setFilterValue("all")}>
-                        All mail {filterValue === "all" && <Check />}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setFilterValue("unread")}>
-                        Unread {filterValue === "unread" && <Check />}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
               </div>
 
               <div className="h-[calc(100svh-(8px+8px+14px+44px-2px))] overflow-scroll p-2 pt-0">
-                {isLoading || isTransitioning ? (
+                {isInitializing ? (
                   <div className="flex flex-col">
                     {[...Array(8)].map((_, i) => (
                       <div key={i} className="flex flex-col px-4 py-3">
@@ -244,6 +263,8 @@ export function Mail({ folder }: MailProps) {
                     items={threadsResponse?.threads || []}
                     isCompact={isCompact}
                     folder={folder}
+                    viewMode={viewMode}
+                    onViewModeChange={handleViewChange}
                   />
                 )}
               </div>
