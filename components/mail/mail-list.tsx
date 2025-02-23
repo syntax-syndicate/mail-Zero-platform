@@ -125,7 +125,7 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
       key={message.id}
       className={cn(
         "group relative flex cursor-pointer flex-col items-start overflow-clip rounded-lg border border-transparent px-4 py-3 text-left text-sm transition-all hover:bg-[#F5F5F5] hover:opacity-100 dark:hover:bg-[#1F1F1F]",
-        !message.unread && "opacity-70",
+        !message.unread && "opacity-50",
         (isMailSelected || isMailBulkSelected) && "border-border bg-accent opacity-100",
         isCompact && "py-2",
       )}
@@ -148,7 +148,11 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
             {message.totalReplies !== 1 ? (
               <span className="ml-0.5 text-xs opacity-70">{message.totalReplies}</span>
             ) : null}
-            {message.unread ? <span className="ml-0.5 size-2 rounded-full bg-[#006FFE]" /> : null}
+            {message.unread ? (
+              <span className="ml-0.5 size-2 rounded-full bg-[#006FFE]" />
+            ) : (
+              <span className="ml-0.5 size-2 rounded-full bg-[#006FFE]" />
+            )}
           </p>
         </div>
         {message.receivedOn ? (
