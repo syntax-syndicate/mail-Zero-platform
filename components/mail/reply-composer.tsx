@@ -112,7 +112,7 @@ export default function ReplyCompose({ emailData }: { emailData: ParsedMessage[]
   };
 
   return (
-    <div className="relative bottom-0 left-0 right-0 z-10 mb-6 bg-[#F5F5F5] px-2 pb-2 pt-2 dark:bg-[#0A0A0A]">
+    <div className="relative bottom-0 left-0 right-0 z-10 mb-6 bg-offsetLight px-2 pb-2 pt-2 dark:bg-offsetDark">
       <form className="relative mb-[2px] space-y-2.5 rounded-[10px] border p-2">
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-2">

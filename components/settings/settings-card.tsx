@@ -16,7 +16,7 @@ export function SettingsCard({
   className,
 }: SettingsCardProps) {
   return (
-    <Card className={cn("w-full border-none bg-[#F5F5F5] dark:bg-[#0A0A0A]", className)}>
+    <Card className={cn("w-full border-none bg-offsetLight dark:bg-offsetDark", className)}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}

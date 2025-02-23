@@ -95,7 +95,7 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
     <div className="flex h-screen flex-col">
       <div
         className={cn(
-          "relative flex h-full flex-col bg-[#F5F5F5] transition-all duration-300 dark:bg-[#0A0A0A]",
+          "relative flex h-full flex-col bg-offsetLight transition-all duration-300 dark:bg-offsetDark",
           isMobile ? "" : "rounded-r-lg",
           isFullscreen ? "fixed inset-0 z-50" : "",
         )}

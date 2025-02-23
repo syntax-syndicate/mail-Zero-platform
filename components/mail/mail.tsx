@@ -130,7 +130,7 @@ export function Mail({ folder }: MailProps) {
             defaultSize={isMobile ? 100 : 25}
             minSize={isMobile ? 100 : 25}
           >
-            <div className="flex-1 flex-col overflow-y-auto bg-[#F5F5F5] shadow-inner dark:bg-[#0A0A0A] md:flex md:rounded-2xl md:border md:shadow-sm">
+            <div className="flex-1 flex-col overflow-y-auto bg-offsetLight shadow-inner dark:bg-offsetDark md:flex md:rounded-2xl md:border md:shadow-sm">
               <div
                 className={cn(
                   "sticky top-0 z-10 flex items-center justify-between gap-1.5 border-b-2 p-2 transition-colors",

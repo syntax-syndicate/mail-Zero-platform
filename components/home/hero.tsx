@@ -106,7 +106,9 @@ export default function Hero() {
                 className="group h-[40px] w-[170px] rounded-md bg-white text-black hover:bg-white hover:text-black"
                 asChild
               >
-                <Link href="/login">Contact Us</Link>
+                <Link target="_blank" href="https://cal.link/0-email">
+                  Contact Us
+                </Link>
               </Button>
             </div>
           ) : (
