@@ -32,7 +32,7 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppSidebar className="hidden lg:flex" />
-      <div className="w-full bg-offsetLight dark:bg-offsetDark md:p-3">
+      <div className="w-full md:p-3">
         <div className="rounded-inherit flex">
           <ResizablePanelGroup
             direction="horizontal"
