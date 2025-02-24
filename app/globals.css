@@ -187,3 +187,13 @@
     }
   }
 }
+
+@layer components {
+  .compose-gradient {
+    @apply relative overflow-hidden rounded-xl bg-gradient-to-r from-pink-100 via-teal-100 to-violet-200 dark:from-pink-800 dark:via-teal-800 dark:to-violet-800;
+  }
+
+  .compose-gradient-inner {
+    @apply rounded-md bg-popover p-2;
+  }
+}

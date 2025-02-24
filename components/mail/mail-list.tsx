@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState, type FolderType } from "@/components/mail/empty-state";
 import { ComponentProps, useEffect, useRef, useState } from "react";
 import { preloadThread, useMarkAsRead } from "@/hooks/use-threads";
@@ -9,6 +10,8 @@ import { useSession } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
 import { InitialThread } from "@/types";
+import { useTheme } from "next-themes";
+import Image from "next/image";
 
 interface MailListProps {
   items: InitialThread[];
@@ -25,6 +28,47 @@ type ThreadProps = {
   selectMode: MailSelectMode;
   onSelect: (message: InitialThread) => void;
   isCompact?: boolean;
+};
+
+const StreamingText = ({ text }: { text: string }) => {
+  const [displayText, setDisplayText] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+  const { theme } = useTheme();
+  useEffect(() => {
+    let currentIndex = 0;
+    setIsComplete(false);
+    setDisplayText("");
+
+    const interval = setInterval(() => {
+      if (currentIndex < text.length) {
+        const nextChar = text[currentIndex];
+        console.log("Adding character:", nextChar);
+        setDisplayText((prev) => prev + nextChar);
+        currentIndex++;
+      } else {
+        setIsComplete(true);
+        clearInterval(interval);
+      }
+    }, 20);
+
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-2",
+        isComplete && "animate-pulse border-r-2 border-primary",
+      )}
+    >
+      {theme === "dark" ? (
+        <Image src="/white-icon.svg" alt="logo" className="h-4 w-4" width={100} height={100} />
+      ) : (
+        <Image src="/black-icon.svg" alt="logo" className="h-4 w-4" width={100} height={100} />
+      )}
+      {displayText}
+    </span>
+  );
 };
 
 const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: ThreadProps) => {
@@ -88,7 +132,6 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
         if (isHovering.current) {
           const messageId = message.threadId ?? message.id;
           // Only prefetch if still hovering and hasn't been prefetched
-          console.log(`🕒 Hover threshold reached for email ${messageId}, initiating prefetch...`);
           preloadThread(session.user.id, messageId, session.connectionId!);
           hasPrefetched.current = true;
         }
@@ -118,64 +161,80 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
   }, []);
 
   return (
-    <div
-      onClick={handleMailClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      key={message.id}
-      className={cn(
-        "group relative flex cursor-pointer flex-col items-start overflow-clip rounded-lg border border-transparent px-4 py-3 text-left text-sm transition-all hover:bg-offsetLight hover:bg-primary/5 hover:opacity-100",
-        !message.unread && "opacity-50",
-        (isMailSelected || isMailBulkSelected) && "border-border bg-primary/5 opacity-100",
-        isCompact && "py-2",
-      )}
-    >
-      <div
-        className={cn(
-          "absolute inset-y-0 left-0 w-1 -translate-x-2 bg-primary transition-transform ease-out",
-          isMailBulkSelected && "translate-x-0",
-        )}
-      />
-      <div className="flex w-full items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p
+    <Tooltip delayDuration={1500}>
+      <TooltipTrigger asChild>
+        <div
+          onClick={handleMailClick}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          key={message.id}
+          className={cn(
+            "group relative flex cursor-pointer flex-col items-start overflow-clip rounded-lg border border-transparent px-4 py-3 text-left text-sm transition-all hover:bg-offsetLight hover:bg-primary/5 hover:opacity-100",
+            !message.unread && "opacity-50",
+            (isMailSelected || isMailBulkSelected) && "border-border bg-primary/5 opacity-100",
+            isCompact && "py-2",
+          )}
+        >
+          <div
             className={cn(
-              message.unread ? "font-bold" : "font-medium",
-              "text-md flex items-baseline gap-1 group-hover:opacity-100",
+              "absolute inset-y-0 left-0 w-1 -translate-x-2 bg-primary transition-transform ease-out",
+              isMailBulkSelected && "translate-x-0",
             )}
-          >
-            <span className={cn(mail.selected && "max-w-[120px] truncate")}>
-              {highlightText(message.sender.name, searchValue.highlight)}
-            </span>{" "}
-            {message.totalReplies !== 1 ? (
-              <span className="ml-0.5 text-xs opacity-70">{message.totalReplies}</span>
+          />
+          <div className="flex w-full items-center justify-between">
+            <div className="flex items-center gap-2">
+              <p
+                className={cn(
+                  message.unread ? "font-bold" : "font-medium",
+                  "text-md flex items-baseline gap-1 group-hover:opacity-100",
+                )}
+              >
+                <span className={cn(mail.selected && "max-w-[120px] truncate")}>
+                  {highlightText(message.sender.name, searchValue.highlight)}
+                </span>{" "}
+                {message.totalReplies !== 1 ? (
+                  <span className="ml-0.5 text-xs opacity-70">{message.totalReplies}</span>
+                ) : null}
+                {message.unread ? (
+                  <span className="ml-0.5 size-2 rounded-full bg-[#006FFE]" />
+                ) : null}
+              </p>
+            </div>
+            {message.receivedOn ? (
+              <p
+                className={cn(
+                  "text-xs font-normal opacity-70 transition-opacity group-hover:opacity-100",
+                  isMailSelected && "opacity-100",
+                )}
+              >
+                {formatDate(message.receivedOn.split(".")[0])}
+              </p>
             ) : null}
-            {message.unread ? <span className="ml-0.5 size-2 rounded-full bg-[#006FFE]" /> : null}
-          </p>
-        </div>
-        {message.receivedOn ? (
+          </div>
           <p
             className={cn(
-              "text-xs font-normal opacity-70 transition-opacity group-hover:opacity-100",
+              "mt-1 text-xs opacity-70 transition-opacity",
+              mail.selected ? "line-clamp-1" : "line-clamp-2",
+              isCompact && "line-clamp-1",
               isMailSelected && "opacity-100",
             )}
           >
-            {formatDate(message.receivedOn.split(".")[0])}
+            {highlightText(message.title, searchValue.highlight)}
           </p>
-        ) : null}
-      </div>
-      <p
-        className={cn(
-          "mt-1 text-xs opacity-70 transition-opacity",
-          mail.selected ? "line-clamp-1" : "line-clamp-2",
-          isCompact && "line-clamp-1",
-          isMailSelected && "opacity-100",
-        )}
+          {!isCompact && <MailLabels labels={message.tags} />}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        sideOffset={5}
+        className="compose-gradient p-[1px]"
       >
-        {highlightText(message.title, searchValue.highlight)}
-      </p>
-      {!isCompact && <MailLabels labels={message.tags} />}
-    </div>
+        <div className="compose-gradient-inner w-full whitespace-normal break-words">
+          <StreamingText text="Google has granted you gmail access to the following account: nizzy@0.email for 30 days." />
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
