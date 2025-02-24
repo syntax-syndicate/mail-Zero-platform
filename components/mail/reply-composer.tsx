@@ -120,7 +120,7 @@ export default function ReplyCompose({ emailData }: { emailData: ParsedMessage[]
     <div className="w-full bg-offsetLight p-2 dark:bg-offsetDark">
       <form
         className={cn(
-          "flex flex-col space-y-2.5 rounded-[10px] border-2 border-[#A0A0A0] p-2",
+          "flex h-72 flex-col space-y-2.5 rounded-[10px] border border-border px-2 py-4",
           isTextAreaFocused ? "ring-2 ring-[#3D3D3D]" : "",
         )}
       >
@@ -240,7 +240,7 @@ export default function ReplyCompose({ emailData }: { emailData: ParsedMessage[]
               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="mr-2 flex items-center gap-2">
             <Button variant="ghost" size="sm" className="h-8">
               Save draft
             </Button>

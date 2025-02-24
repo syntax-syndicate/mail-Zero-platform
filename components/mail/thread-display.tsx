@@ -235,7 +235,7 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
               ))}
             </div>
           </ScrollArea>
-          <div className="mt-auto flex-shrink-0">
+          <div className="flex-shrink-0">
             <ReplyCompose emailData={emailData} />
           </div>
         </div>
