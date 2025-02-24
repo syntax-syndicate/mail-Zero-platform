@@ -14,6 +14,7 @@ export default {
       colors: {
         offsetDark: "#0A0A0A",
         offsetLight: "#F5F5F5",
+        logout: "#D93036",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

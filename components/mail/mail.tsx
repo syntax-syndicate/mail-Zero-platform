@@ -1,20 +1,6 @@
 "use client";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlignVerticalSpaceAround,
-  ArchiveX,
-  BellOff,
-  Check,
-  ListFilter,
-  SearchIcon,
-  X,
-} from "lucide-react";
+import { AlignVerticalSpaceAround, ArchiveX, BellOff, SearchIcon, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -126,7 +112,10 @@ export function Mail({ folder }: MailProps) {
           className="rounded-inherit gap-1.5 overflow-hidden"
         >
           <ResizablePanel
-            className="border-none !bg-transparent"
+            className={cn(
+              "border-none !bg-transparent",
+              mail?.selected ? "md:hidden lg:block" : "", // Hide on md, but show again on lg and up
+            )}
             defaultSize={isMobile ? 100 : 25}
             minSize={isMobile ? 100 : 25}
           >
@@ -250,12 +239,14 @@ export function Mail({ folder }: MailProps) {
         {/* Mobile Drawer */}
         {isMobile && (
           <Drawer open={open} onOpenChange={setOpen}>
-            <DrawerContent className="h-[calc(100vh-3rem)] bg-card p-0">
+            <DrawerContent className="h-[calc(100vh-3rem)] p-0">
               <DrawerHeader className="sr-only">
                 <DrawerTitle>Email Details</DrawerTitle>
               </DrawerHeader>
               <div className="flex h-full flex-col overflow-hidden">
-                <ThreadDisplay mail={mail.selected} onClose={handleClose} isMobile={true} />
+                <div className="flex-1 overflow-hidden">
+                  <ThreadDisplay mail={mail.selected} onClose={handleClose} isMobile={true} />
+                </div>
               </div>
             </DrawerContent>
           </Drawer>

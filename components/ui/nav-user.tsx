@@ -211,8 +211,8 @@ export function NavUser() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
-                <LogOut size={16} strokeWidth={2} className="mr-1 opacity-60" aria-hidden="true" />
-                <p className="text-[13px] opacity-60">Log out</p>
+                <LogOut size={16} strokeWidth={2} className="mr-1" aria-hidden="true" />
+                <p className="text-[13px]">Log out</p>
               </DropdownMenuItem>
             </>
           ) : (

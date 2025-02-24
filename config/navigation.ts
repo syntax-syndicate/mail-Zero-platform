@@ -15,7 +15,7 @@ import { XIcon } from "@/components/icons/animated/x";
 import { Mail, Shield, Palette } from "lucide-react";
 import { ChevronLeft } from "lucide-react";
 
-interface NavItem {
+export interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<any>;
