@@ -239,7 +239,7 @@ export function Mail({ folder }: MailProps) {
         {/* Mobile Drawer */}
         {isMobile && (
           <Drawer open={open} onOpenChange={setOpen}>
-            <DrawerContent className="h-[calc(100vh-3rem)] bg-offsetLight p-0 dark:bg-offsetDark">
+            <DrawerContent className="h-[calc(100vh-3rem)] overflow-hidden bg-offsetLight p-0 dark:bg-offsetDark">
               <DrawerHeader className="sr-only">
                 <DrawerTitle>Email Details</DrawerTitle>
               </DrawerHeader>

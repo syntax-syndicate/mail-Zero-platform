@@ -108,22 +108,20 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
       >
         <div className="flex flex-shrink-0 items-center border-b p-2">
           <div className="flex flex-1 items-center gap-2">
-            {!isMobile && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="md:h-fit md:px-2"
-                    disabled={!emailData}
-                    onClick={handleClose}
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Close</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Close</TooltipContent>
-              </Tooltip>
-            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="md:h-fit md:px-2"
+                  disabled={!emailData}
+                  onClick={handleClose}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Close</TooltipContent>
+            </Tooltip>
           </div>
           <div className="flex items-center gap-2">
             <Tooltip>
