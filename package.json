@@ -17,8 +17,8 @@
     "docker:clean": "docker-compose down -v"
   },
   "devDependencies": {
-    "@zero/tsconfig": "workspace:*",
     "@types/node": "^22.13.5",
+    "@zero/tsconfig": "workspace:*",
     "husky": "^9.1.7",
     "prettier": "^3.5.0",
     "prettier-plugin-sort-imports": "^1.8.6",
@@ -33,6 +33,7 @@
   },
   "packageManager": "pnpm@10.2.0",
   "dependencies": {
-    "@vercel/analytics": "^1.5.0"
+    "@vercel/analytics": "^1.5.0",
+    "novel": "^1.0.2"
   }
 }
