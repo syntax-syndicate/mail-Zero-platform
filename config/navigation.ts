@@ -23,6 +23,7 @@ export interface NavItem {
   isBackButton?: boolean;
   isSettingsButton?: boolean;
   disabled?: boolean;
+  shortcut?: string;
 }
 
 interface NavSection {

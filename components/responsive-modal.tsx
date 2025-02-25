@@ -4,17 +4,20 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { type ReactElement } from "react";
 import { useMedia } from "react-use";
+import { cn } from "@/lib/utils";
 
 type ResponsiveModalProps = {
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  className?: string;
 };
 
 export default function ResponsiveModal({
   children,
   open,
   onOpenChange,
+  className,
 }: ResponsiveModalProps): ReactElement {
   const isDesktop = useMedia("(min-width: 1024px)", true);
 
@@ -27,7 +30,12 @@ export default function ResponsiveModal({
             <DialogDescription>Modal content</DialogDescription>
           </DialogHeader>
         </VisuallyHidden>
-        <DialogContent className="bordr-none hide-scrollbar w-full overflow-y-auto p-0 sm:max-w-lg">
+        <DialogContent
+          className={cn(
+            "hide-scrollbar w-full overflow-y-auto border-none p-0 sm:max-w-lg",
+            className,
+          )}
+        >
           {children}
         </DialogContent>
       </Dialog>

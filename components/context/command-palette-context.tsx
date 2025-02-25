@@ -90,7 +90,7 @@ export function CommandPalette({ children }: { children: React.ReactNode }) {
     const combinedCommands = [
       { group: "Mail", items: mailCommands.map((c) => c.item) },
       { group: "Settings", items: settingsCommands.map((c) => c.item) },
-      ...otherCommands.map((section) => ({ group: section.group, items: section.item })),
+      ...otherCommands.map((section) => ({ group: section.group, items: [section.item] })),
     ];
 
     const filteredCommands = combinedCommands.map((group) => {

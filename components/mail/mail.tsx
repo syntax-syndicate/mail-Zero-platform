@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type Mail } from "@/components/mail/data";
 import { useSearchParams } from "next/navigation";
 import { useThreads } from "@/hooks/use-threads";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
@@ -40,7 +41,7 @@ export function Mail({ folder }: MailProps) {
   const [mail, setMail] = useMail();
   const [isCompact, setIsCompact] = useState(false);
   const searchParams = useSearchParams();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [filterValue, setFilterValue] = useState<"all" | "unread">("all");
   const router = useRouter();
   const { data: session, isPending } = useSession();
@@ -77,18 +78,6 @@ export function Mail({ folder }: MailProps) {
   } = useThreads(searchValue.folder || folder, labels, searchValue.value);
   const [open, setOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  // Check if we're on mobile on mount and when window resizes
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px is the 'md' breakpoint
-    };
-
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
 
   useEffect(() => {
     if (mail.selected) {

@@ -4,6 +4,7 @@ import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SidebarToggle } from "@/components/ui/sidebar-toggle";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { Suspense } from "react";
 
@@ -16,19 +17,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 }
 
 function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
-
+  const isMobile = useIsMobile();
   return (
     <>
       <AppSidebar className="hidden lg:flex" />

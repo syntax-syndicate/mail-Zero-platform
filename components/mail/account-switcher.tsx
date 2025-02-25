@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-
 import {
   Select,
   SelectContent,
@@ -10,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface AccountSwitcherProps {
   isCollapsed: boolean;
@@ -21,7 +20,7 @@ interface AccountSwitcherProps {
 }
 
 export function AccountSwitcher({ isCollapsed, accounts }: AccountSwitcherProps) {
-  const [selectedAccount, setSelectedAccount] = React.useState<string>(accounts[0].email);
+  const [selectedAccount, setSelectedAccount] = useState<string>(accounts[0].email);
 
   return (
     <Select defaultValue={selectedAccount} onValueChange={setSelectedAccount}>

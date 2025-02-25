@@ -8,28 +8,18 @@ import { Separator } from "@/components/ui/separator";
 import { SearchIcon } from "../icons/animated/search";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { useDrafts } from "./draftHooks/useDrafts";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { DraftType } from "@/store/draftStates";
 import { useState } from "react";
-import * as React from "react";
 
 export function Draft() {
+  const isMobile = useIsMobile();
   const { drafts, addDraft, removeDraft } = useDrafts();
 
   // Todo: store this in cookies / local storage
   const [isCompact, setIsCompact] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<DraftType | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // checking if the screen is mobile
-  React.useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
 
   // Handle changes to subject or message
   const handleInputChange = (field: "subject" | "message", value: string) => {

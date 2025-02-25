@@ -22,6 +22,7 @@ import { DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendEmail } from "@/actions/send";
+import { MailEditor } from "./editor";
 import { useQueryState } from "nuqs";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
@@ -37,7 +38,6 @@ interface MailComposeProps {
 }
 
 export function MailCompose({ onClose, replyTo }: MailComposeProps) {
-  const editorRef = React.useRef<HTMLDivElement>(null);
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const [toInput, setToInput] = React.useState(replyTo?.email || "");
   const [showSuggestions, setShowSuggestions] = React.useState(false);
@@ -84,31 +84,6 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
 
   const removeAttachment = (index: number) => {
     setAttachments(attachments.filter((_, i) => i !== index));
-  };
-
-  const insertFormat = (format: string) => {
-    if (!editorRef.current) return;
-    document.execCommand("styleWithCSS", false, "true");
-
-    switch (format) {
-      case "bold":
-        document.execCommand("bold", false);
-        break;
-      case "italic":
-        document.execCommand("italic", false);
-        break;
-      case "list":
-        document.execCommand("insertUnorderedList", false);
-        break;
-      case "ordered-list":
-        document.execCommand("insertOrderedList", false);
-        break;
-      case "link":
-        const url = prompt("Enter URL:");
-        if (url) document.execCommand("createLink", false, url);
-        break;
-    }
-    editorRef.current.focus();
   };
 
   const MAX_VISIBLE_ATTACHMENTS = 3;
@@ -326,80 +301,7 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
                 tabIndex={2}
               />
 
-              <div className="flex justify-end">
-                <ToggleGroup type="multiple">
-                  <ToggleGroupItem tabIndex={3} value="bold" onClick={() => insertFormat("bold")}>
-                    <Bold className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    tabIndex={4}
-                    value="italic"
-                    onClick={() => insertFormat("italic")}
-                  >
-                    <Italic className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem tabIndex={5} value="list" onClick={() => insertFormat("list")}>
-                    <List className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    tabIndex={6}
-                    value="ordered-list"
-                    onClick={() => insertFormat("ordered-list")}
-                  >
-                    <ListOrdered className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    tabIndex={7}
-                    onClick={() => insertFormat("link")}
-                  >
-                    <Link2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    tabIndex={8}
-                    onClick={() => {
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = "image/*";
-                      input.onchange = (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            insertFormat(`![${file.name}](${reader.result})`);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      };
-                      input.click();
-                    }}
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                  </Button>
-                </ToggleGroup>
-              </div>
-
-              <div
-                ref={editorRef}
-                contentEditable
-                className="min-h-[300px] w-full resize-none overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                role="textbox"
-                aria-multiline="true"
-                tabIndex={9}
-                style={{
-                  overflowWrap: "break-word",
-                  wordWrap: "break-word",
-                  whiteSpace: "pre-wrap",
-                  maxWidth: "100%",
-                }}
-                onInput={() => {
-                  setMessageContent(editorRef.current?.innerHTML || "");
-                }}
-              />
-
+              <MailEditor />
               {renderAttachments()}
               <div className="mt-4 flex justify-between">
                 <label>
