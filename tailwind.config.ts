@@ -1,3 +1,4 @@
+const { default: flattenColorPalette } = require("tailwindcss/lib/util/flattenColorPalette");
 const defaultTheme = require("tailwindcss/defaultTheme");
 import type { Config } from "tailwindcss";
 
@@ -11,8 +12,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        offsetDark: "#0A0A0A",
+        offsetLight: "#F5F5F5",
+        logout: "#D93036",
+        subtleWhite: "#EAEAEA",
+        subtleBlack: "#1F1F1F",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        skyBlue: "#0066FF",
+        shinyGray: "#A1A1A1",
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
@@ -71,7 +79,57 @@ export default {
         sans: ["Geist", ...defaultTheme.fontFamily.sans],
         mono: ["Geist_Mono", ...defaultTheme.fontFamily.mono],
       },
+      keyframes: {
+        "fade-up": {
+          "0%": {
+            transform: "translateY(10px)",
+          },
+          "100%": {
+            transform: "translateY(0)",
+          },
+        },
+        moveUp: {
+          "0%": {
+            transform: "translateY(90px)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "translateY(0)",
+            opacity: "1",
+          },
+        },
+        fadeIn: {
+          "0%": {
+            opacity: "0",
+          },
+          "100%": {
+            opacity: "1",
+          },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "move-up": "moveUp 3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in": "fadeIn 3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    addVariablesForColors,
+    function ({ matchUtilities, theme }: any) {
+      matchUtilities({ values: flattenColorPalette(theme("backgroundColor")), type: "color" });
+    },
+  ],
 } satisfies Config;
+
+function addVariablesForColors({ addBase, theme }: any) {
+  let allColors = flattenColorPalette(theme("colors"));
+  let newVars = Object.fromEntries(
+    Object.entries(allColors).map(([key, val]) => [`--${key}`, val]),
+  );
+
+  addBase({
+    ":root": newVars,
+  });
+}

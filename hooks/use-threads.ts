@@ -1,50 +1,89 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
-import { $fetch, useSession } from "@/lib/auth-client";
+
+import { getMail, getMails, markAsRead as markAsReadAction } from "@/actions/mail";
 import { InitialThread, ParsedMessage } from "@/types";
-import { BASE_URL } from "@/lib/constants";
-import useSWR from "swr";
+import { useSession } from "@/lib/auth-client";
+import useSWR, { preload } from "swr";
+
+export const preloadThread = (userId: string, threadId: string, connectionId: string) => {
+  console.log(`🔄 Prefetching email ${threadId}...`);
+  preload([userId, threadId, connectionId], fetchThread);
+};
 
 // TODO: improve the filters
 const fetchEmails = async (args: any[]) => {
-  const [_, folder, query, max] = args;
+  const [_, folder, query, max, labelIds, pageToken] = args;
 
-  let searchParams = new URLSearchParams();
+  const searchParams = new URLSearchParams();
   if (max) searchParams.set("max", max.toString());
   if (query) searchParams.set("q", query);
   if (folder) searchParams.set("folder", folder.toString());
+  if (labelIds) searchParams.set("labelIds", labelIds.join(","));
+  if (pageToken) searchParams.set("pageToken", pageToken);
 
-  return (await $fetch("/api/v1/mail?" + searchParams.toString(), {
-    baseURL: BASE_URL,
-  }).then((e) => e.data)) as RawResponse;
+  const data = await getMails({ folder, q: query, max, labelIds, pageToken });
+
+  return data;
 };
 
-const fetchEmail = async (args: any[]): Promise<ParsedMessage> => {
+const fetchThread = async (args: any[]) => {
   const [_, id] = args;
-  return await $fetch(`/api/v1/mail/${id}`, {
-    baseURL: BASE_URL,
-  }).then((e) => e.data as ParsedMessage);
+  const data = await getMail({ id });
+  return data;
 };
 
 // Based on gmail
 interface RawResponse {
-  nextPageToken: number;
-  messages: InitialThread[];
+  nextPageToken: string | undefined;
+  threads: InitialThread[];
   resultSizeEstimate: number;
 }
 
-export const useThreads = (folder: string, query?: string, max?: number) => {
+export const useThreads = (
+  folder: string,
+  labelIds?: string[],
+  query?: string,
+  max?: number,
+  pageToken?: string,
+) => {
   const { data: session } = useSession();
-  const { data, isLoading, error } = useSWR<RawResponse>(
-    [session?.user.id, folder, query, max],
+  const { data, isLoading, error, isValidating } = useSWR<RawResponse>(
+    session?.user.id
+      ? [session?.user.id, folder, query, max, labelIds, pageToken, session.connectionId]
+      : null,
     fetchEmails,
+  );
+
+  return {
+    data: data,
+    isLoading: isLoading,
+    isValidating: isValidating,
+    error,
+  };
+};
+
+export const useThread = (id: string) => {
+  const { data: session } = useSession();
+
+  const { data, isLoading, error } = useSWR<ParsedMessage[]>(
+    session?.user.id ? [session.user.id, id, session.connectionId] : null,
+    fetchThread,
   );
 
   return { data, isLoading, error };
 };
 
-export const useThread = (id: string) => {
-  const { data: session } = useSession();
-  const { data, isLoading, error } = useSWR<ParsedMessage>([session?.user.id, id], fetchEmail);
+export const useMarkAsRead = () => {
+  const markAsRead = async (id: string) => {
+    try {
+      await markAsReadAction({ id });
+    } catch (error) {
+      console.error("Error marking email as read:", error);
+      return false;
+    }
+  };
 
-  return { data, isLoading, error };
+  return { markAsRead };
 };

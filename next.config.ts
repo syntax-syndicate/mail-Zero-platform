@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      { hostname: "lh3.googleusercontent.com" }, // Todo: Find a better way to limit this Image Optimization
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "mail0.io" },
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
   typescript: {
@@ -11,6 +13,20 @@ const nextConfig: NextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  async redirects() {
+    return [
+      {
+        source: "/settings",
+        destination: "/settings/general",
+        permanent: true,
+      },
+      {
+        source: "/mail",
+        destination: "/mail/inbox",
+        permanent: true,
+      },
+    ];
   },
 };
 

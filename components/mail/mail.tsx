@@ -1,61 +1,86 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlignVerticalSpaceAround, ListFilter } from "lucide-react";
-import { useState } from "react";
-import * as React from "react";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { MailDisplay } from "@/components/mail/mail-display";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { AlignVerticalSpaceAround, ArchiveX, BellOff, SearchIcon, X } from "lucide-react";
+import { useState, useCallback, useMemo, useEffect, ReactNode } from "react";
+import { ThreadDisplay } from "@/components/mail/thread-display";
+import { useMediaQuery } from "../../hooks/use-media-query";
+import { useSearchValue } from "@/hooks/use-search-value";
 import { MailList } from "@/components/mail/mail-list";
-import { Separator } from "@/components/ui/separator";
 import { useMail } from "@/components/mail/use-mail";
-import { Button } from "@/components/ui/button";
-
-// Filters imports
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useFilteredMails } from "@/hooks/use-filtered-mails";
-import { tagsAtom } from "@/components/mail/use-tags";
 import { SidebarToggle } from "../ui/sidebar-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 import { type Mail } from "@/components/mail/data";
+import { useSearchParams } from "next/navigation";
 import { useThreads } from "@/hooks/use-threads";
-import { useAtomValue } from "jotai";
+import { Button } from "@/components/ui/button";
+import { useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { SearchBar } from "./search-bar";
+import { cn } from "@/lib/utils";
 
 interface MailProps {
   accounts: {
     label: string;
     email: string;
-    icon: React.ReactNode;
+    icon: ReactNode;
   }[];
-  mails: Mail[];
+  folder: string;
   defaultLayout: number[] | undefined;
   defaultCollapsed?: boolean;
   navCollapsedSize: number;
   muted?: boolean;
 }
 
-export function Mail({ mails }: MailProps) {
-  const { data: threadsResponse, isLoading } = useThreads("inbox");
-  const [mail] = useMail();
-  const [isCompact, setIsCompact] = React.useState(false);
-  const tags = useAtomValue(tagsAtom);
-  const activeTags = tags.filter((tag) => tag.checked);
-
-  const filteredMails = useFilteredMails(mails, activeTags);
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+export function Mail({ folder }: MailProps) {
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchValue] = useSearchValue();
+  const [mail, setMail] = useMail();
+  const [isCompact, setIsCompact] = useState(false);
+  const searchParams = useSearchParams();
   const [isMobile, setIsMobile] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filterValue, setFilterValue] = useState<"all" | "unread">("all");
+  const router = useRouter();
+  const { data: session, isPending } = useSession();
+
+  useEffect(() => {
+    if (!session?.user && !isPending) {
+      router.push("/login");
+    }
+  }, [session?.user, isPending]);
+
+  const labels = useMemo(() => {
+    if (filterValue === "all") {
+      if (searchParams.has("category")) {
+        return [`CATEGORY_${searchParams.get("category")!.toUpperCase()}`];
+      }
+      return undefined;
+    }
+    if (filterValue) {
+      if (searchParams.has("category")) {
+        return [
+          filterValue.toUpperCase(),
+          `CATEGORY_${searchParams.get("category")!.toUpperCase()}`,
+        ];
+      }
+      return [filterValue.toUpperCase()];
+    }
+    return undefined;
+  }, [filterValue, searchParams]);
+
+  const {
+    data: threadsResponse,
+    isLoading,
+    isValidating,
+  } = useThreads(searchValue.folder || folder, labels, searchValue.value);
+  const [open, setOpen] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // Check if we're on mobile on mount and when window resizes
-  React.useEffect(() => {
+  useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768); // 768px is the 'md' breakpoint
     };
@@ -66,96 +91,191 @@ export function Mail({ mails }: MailProps) {
     return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
-  // Only show dialog if we're on mobile
-  const showDialog = isDialogOpen && isMobile;
+  useEffect(() => {
+    if (mail.selected) {
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  }, [mail.selected]);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setMail((mail) => ({ ...mail, selected: null }));
+  }, [setMail]);
 
   return (
     <TooltipProvider delayDuration={0}>
       <div className="rounded-inherit flex">
         <ResizablePanelGroup
           direction="horizontal"
-          autoSaveId={"mail-panel-layout"}
-          className="rounded-inherit overflow-hidden"
+          autoSaveId="mail-panel-layout"
+          className="rounded-inherit gap-1.5 overflow-hidden"
         >
-          <ResizablePanel defaultSize={isMobile ? 290 : 35} minSize={isMobile ? 100 : 35}>
-            <div className="flex-1 overflow-y-auto pt-[6px]">
-              <div>
-                <div className="flex items-center justify-between px-2">
-                  <div className="flex items-center gap-2">
-                    <SidebarToggle />
-                    <h1 className="hidden font-semibold md:block">Inbox</h1>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
+          <ResizablePanel
+            className={cn(
+              "border-none !bg-transparent",
+              mail?.selected ? "md:hidden lg:block" : "", // Hide on md, but show again on lg and up
+            )}
+            defaultSize={isMobile ? 100 : 25}
+            minSize={isMobile ? 100 : 25}
+          >
+            <div className="flex-1 flex-col overflow-y-auto bg-offsetLight shadow-inner dark:bg-offsetDark md:flex md:rounded-2xl md:border md:shadow-sm">
+              <div
+                className={cn(
+                  "sticky top-0 z-10 flex items-center justify-between gap-1.5 border-b-2 p-2 transition-colors",
+                  isValidating ? "border-b-green-500" : "border-b-transparent",
+                )}
+              >
+                <SidebarToggle className="h-fit px-2" />
+                <Button
+                  variant="ghost"
+                  className="md:h-fit md:px-2"
+                  onClick={() => setIsCompact(!isCompact)}
+                >
+                  <AlignVerticalSpaceAround />
+                </Button>
+                {searchMode && (
+                  <div className="flex flex-1 items-center justify-center gap-1.5">
+                    <SearchBar />
                     <Button
                       variant="ghost"
                       className="md:h-fit md:px-2"
-                      onClick={() => setIsCompact(!isCompact)}
+                      onClick={() => setSearchMode(false)}
                     >
-                      <AlignVerticalSpaceAround />
+                      <X />
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="md:h-fit md:px-2">
-                          <ListFilter className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setFilterValue("all")}>
-                          All mail
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setFilterValue("unread")}>
-                          Unread
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
-                </div>
-
-                <Separator className="mt-2" />
-
-                <div className="h-[calc(93vh)]">
-                  {isLoading ? (
-                    <p>Loading</p>
-                  ) : (
-                    <MailList
-                      items={threadsResponse?.messages || []}
-                      isCompact={isCompact}
-                      onMailClick={() => setIsDialogOpen(true)}
-                    />
-                  )}
-                </div>
+                )}
+                {!searchMode && (
+                  <>
+                    {mail.bulkSelected.length > 0 ? (
+                      <>
+                        <div className="flex flex-1 items-center justify-center">
+                          <span className="text-sm font-medium tabular-nums">
+                            {mail.bulkSelected.length} selected
+                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="ml-1.5 h-8 w-fit px-2 text-muted-foreground"
+                                onClick={() => setMail({ ...mail, bulkSelected: [] })}
+                              >
+                                <X />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Clear Selection</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <BulkSelectActions />
+                      </>
+                    ) : (
+                      <>
+                        <h1 className="flex-1 text-center text-sm font-medium capitalize">
+                          {folder}
+                        </h1>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            className="md:h-fit md:px-2"
+                            onClick={() => setSearchMode(true)}
+                          >
+                            <SearchIcon />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="h-[calc(100dvh-56px)] overflow-hidden pt-0 md:h-[calc(100dvh-(8px+8px+14px+44px))]">
+                {isLoading ? (
+                  <div className="flex flex-col">
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className="flex flex-col px-4 py-3">
+                        <div className="flex w-full items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-24" />
+                          </div>
+                          <Skeleton className="h-3 w-12" />
+                        </div>
+                        <Skeleton className="mt-2 h-3 w-32" />
+                        <Skeleton className="mt-2 h-3 w-full" />
+                        <div className="mt-2 flex gap-2">
+                          <Skeleton className="h-4 w-16 rounded-full" />
+                          <Skeleton className="h-4 w-16 rounded-full" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <MailList
+                    items={threadsResponse?.threads || []}
+                    isCompact={isCompact}
+                    folder={folder}
+                  />
+                )}
               </div>
             </div>
           </ResizablePanel>
 
-          {!isMobile && mail.selected && <ResizableHandle withHandle />}
-
-          {mail.selected && (
-            <ResizablePanel
-              defaultSize={isMobile ? 0 : 75}
-              minSize={isMobile ? 0 : 25}
-              className="hidden md:block"
-            >
-              {/* Desktop Mail Display */}
-              <div className="hidden h-full flex-1 overflow-y-auto md:block">
-                <MailDisplay
-                  mail={filteredMails.find((item) => item.id === mail.selected) || null}
-                />
-              </div>
-            </ResizablePanel>
+          {isDesktop && mail.selected && (
+            <>
+              <ResizableHandle className="opacity-0" />
+              <ResizablePanel
+                className="shadow-sm md:flex md:rounded-2xl md:border md:shadow-sm"
+                defaultSize={75}
+                minSize={25}
+              >
+                <div className="hidden h-[calc(100vh-(12px+14px))] flex-1 md:block">
+                  <ThreadDisplay mail={mail.selected} onClose={handleClose} />
+                </div>
+              </ResizablePanel>
+            </>
           )}
         </ResizablePanelGroup>
 
-        {/* Mobile Dialog */}
-        <Dialog open={showDialog} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="h-[100vh] border-none p-0 sm:max-w-[100vw]">
-            <DialogHeader className="hidden">
-              <DialogTitle></DialogTitle>
-            </DialogHeader>
-            <MailDisplay mail={mails.find((item) => item.id === mail.selected) || null} />
-          </DialogContent>
-        </Dialog>
+        {/* Mobile Drawer */}
+        {isMobile && (
+          <Drawer open={open} onOpenChange={setOpen}>
+            <DrawerContent className="h-[calc(100vh-3rem)] overflow-hidden bg-offsetLight p-0 dark:bg-offsetDark">
+              <DrawerHeader className="sr-only">
+                <DrawerTitle>Email Details</DrawerTitle>
+              </DrawerHeader>
+              <div className="flex h-full flex-col overflow-hidden">
+                <div className="flex-1 overflow-hidden">
+                  <ThreadDisplay mail={mail.selected} onClose={handleClose} isMobile={true} />
+                </div>
+              </div>
+            </DrawerContent>
+          </Drawer>
+        )}
       </div>
     </TooltipProvider>
+  );
+}
+
+function BulkSelectActions() {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" className="md:h-fit md:px-2">
+            <BellOff />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Mute</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" className="md:h-fit md:px-2">
+            <ArchiveX />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Move to Junk</TooltipContent>
+      </Tooltip>
+    </div>
   );
 }

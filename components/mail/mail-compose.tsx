@@ -7,12 +7,26 @@ import {
   Italic,
   List,
   ListOrdered,
+  FileIcon,
+  Send,
 } from "lucide-react";
-import * as React from "react";
-
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { compressText, decompressText, truncateFileName } from "@/lib/utils";
+import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { TooltipPortal } from "@radix-ui/react-tooltip";
 import { Separator } from "@/components/ui/separator";
+import { DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { sendEmail } from "@/actions/send";
+import { useQueryState } from "nuqs";
+import { Badge } from "../ui/badge";
+import Image from "next/image";
+import { toast } from "sonner";
+import * as React from "react";
 
 interface MailComposeProps {
   onClose: () => void;
@@ -22,15 +36,8 @@ interface MailComposeProps {
   };
 }
 
-import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
-import { compressText, decompressText } from "@/lib/utils";
-import { useQueryState } from "nuqs";
-import { Badge } from "../ui/badge";
-
 export function MailCompose({ onClose, replyTo }: MailComposeProps) {
-  const editorRef = React.useRef<HTMLTextAreaElement>(null);
+  const editorRef = React.useRef<HTMLDivElement>(null);
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const [toInput, setToInput] = React.useState(replyTo?.email || "");
   const [showSuggestions, setShowSuggestions] = React.useState(false);
@@ -40,6 +47,7 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
     parse: (value) => decompressText(value),
     serialize: (value) => compressText(value),
   });
+
   const [messageContent, setMessageContent] = useQueryState("body", {
     defaultValue: "",
     parse: (value) => decompressText(value),
@@ -48,6 +56,7 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
 
   const { isOpen } = useOpenComposeModal();
 
+  // TODO: get past emails from driver/provider
   const pastEmails = [
     "alice@example.com",
     "bob@example.com",
@@ -103,38 +112,78 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
   };
 
   const MAX_VISIBLE_ATTACHMENTS = 3;
-  const hasHiddenAttachments = attachments.length > MAX_VISIBLE_ATTACHMENTS;
+  const hasHiddenAttachments = React.useMemo(
+    () => attachments.length > MAX_VISIBLE_ATTACHMENTS,
+    [attachments],
+  );
 
-  const truncateFileName = (name: string, maxLength = 15) => {
-    if (name.length <= maxLength) return name;
-    const extIndex = name.lastIndexOf(".");
-    if (extIndex !== -1 && name.length - extIndex <= 5) {
-      // Preserve file extension if possible
-      return `${name.slice(0, maxLength - 5)}...${name.slice(extIndex)}`;
+  const handleSendEmail = async () => {
+    try {
+      await sendEmail({
+        to: toInput,
+        subject: subject,
+        message: messageContent,
+        attachments: attachments,
+      });
+      onClose();
+      toast.success("Email sent successfully!");
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error("Failed to send email. Please try again.");
     }
-    return `${name.slice(0, maxLength)}...`;
   };
 
-  const renderAttachments = () => {
+  const renderAttachments = React.useCallback(() => {
     if (attachments.length === 0) return null;
 
     return (
-      <div className="mx-auto mt-2 flex w-[95%] flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-2">
         {attachments.slice(0, MAX_VISIBLE_ATTACHMENTS).map((file, index) => (
-          <Badge key={index} variant="secondary">
-            {truncateFileName(file.name)}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="-mr-1 ml-2 h-5 w-5 rounded-full p-0"
-              onClick={(e) => {
-                e.preventDefault();
-                removeAttachment(index);
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </Badge>
+          <Tooltip key={index}>
+            <TooltipTrigger asChild>
+              <Badge variant="secondary">
+                {truncateFileName(file.name)}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="-mr-1 ml-2 h-5 w-5 rounded-full p-0"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    removeAttachment(index);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </Badge>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent className="w-64 p-0" sideOffset={6}>
+                <div className="relative h-32 w-full">
+                  {file.type.startsWith("image/") ? (
+                    <Image
+                      src={URL.createObjectURL(file) || "/placeholder.svg"}
+                      alt={file.name}
+                      fill
+                      className="rounded-t-md object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center p-4">
+                      <FileIcon className="h-16 w-16 text-primary" />
+                    </div>
+                  )}
+                </div>
+                <div className="bg-secondary p-2">
+                  <p className="text-sm font-medium">{truncateFileName(file.name, 30)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Size: {(file.size / (1024 * 1024)).toFixed(2)} MB
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Last modified: {new Date(file.lastModified).toLocaleDateString()}
+                  </p>
+                </div>
+              </TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
         ))}
 
         {hasHiddenAttachments && (
@@ -168,27 +217,58 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
                 >
                   <div className="space-y-1">
                     {attachments.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between rounded-md p-2 hover:bg-muted"
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <Paperclip className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate text-sm">{truncateFileName(file.name)}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            removeAttachment(index);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Tooltip key={index}>
+                        <TooltipTrigger asChild>
+                          <div
+                            key={index}
+                            className="flex items-center justify-between rounded-md p-2 hover:bg-muted"
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <Paperclip className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate text-sm">
+                                {truncateFileName(file.name)}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 flex-shrink-0"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeAttachment(index);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-64 p-0">
+                          <div className="relative h-32 w-full">
+                            {file.type.startsWith("image/") ? (
+                              <Image
+                                src={URL.createObjectURL(file) || "/placeholder.svg"}
+                                alt={file.name}
+                                fill
+                                className="rounded-t-md object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center p-4">
+                                <FileIcon className="h-16 w-16 text-primary" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-secondary p-2">
+                            <p className="text-sm font-medium">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Size: {(file.size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Last modified: {new Date(file.lastModified).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                     ))}
                   </div>
                 </div>
@@ -198,140 +278,156 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
         )}
       </div>
     );
-  };
+    // TODO: FIX
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachments, hasHiddenAttachments]);
 
   return (
-    <Card className="h-full w-full border-none shadow-none">
-      <CardHeader>
-        <CardTitle className="text-xl font-bold">New Message</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-2">
-          <div className="relative">
-            <Input
-              tabIndex={1}
-              placeholder="To"
-              value={toInput}
-              onChange={(e) => {
-                setToInput(e.target.value);
-                setShowSuggestions(true);
-              }}
-              className="rounded-none border-0 focus-visible:ring-0"
-            />
-            {showSuggestions && filteredSuggestions.length > 0 && (
-              <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-auto rounded-md border border-input bg-background shadow-lg">
-                {filteredSuggestions.map((email, index) => (
-                  <li
-                    key={index}
-                    onClick={() => {
-                      setToInput(email);
-                      setShowSuggestions(false);
-                    }}
-                    className="cursor-pointer p-2 hover:bg-muted"
-                  >
-                    {email}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <Separator className="mx-auto w-[95%]" />
-          <Input
-            placeholder="Subject"
-            defaultValue={subject || ""}
-            onChange={(e) => setSubject(e.target.value)}
-            className="rounded-none border-0 focus-visible:ring-0"
-            tabIndex={2}
-          />
-        </div>
-        <Separator className="mx-auto w-[95%]" />
-        <div className="flex justify-end p-2">
-          <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("bold")}>
-            <Bold className="h-4 w-4" />
-          </Button>
-          <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("italic")}>
-            <Italic className="h-4 w-4" />
-          </Button>
-          <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("list")}>
-            <List className="h-4 w-4" />
-          </Button>
-          <Button
-            tabIndex={-1}
-            variant="ghost"
-            size="icon"
-            onClick={() => insertFormat("ordered-list")}
-          >
-            <ListOrdered className="h-4 w-4" />
-          </Button>
-          <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("link")}>
-            <Link2 className="h-4 w-4" />
-          </Button>
-          <Button
-            tabIndex={-1}
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = "image/*";
-              input.onchange = (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    insertFormat(`![${file.name}](${reader.result})`);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              };
-              input.click();
-            }}
-          >
-            <ImageIcon className="h-4 w-4" />
-          </Button>
-        </div>
-        <textarea
-          ref={editorRef}
-          className="mx-auto min-h-[300px] w-[95%] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          onChange={(event) => setMessageContent(event.target.value)}
-          value={messageContent || ""}
-          aria-multiline="true"
-        />
-        {renderAttachments()}
-        <div className="mx-auto mt-4 flex w-[95%] items-center justify-between">
-          <label className="cursor-pointer">
-            <Button
-              tabIndex={4}
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                const fileInput = e.currentTarget.nextElementSibling as HTMLInputElement;
-                fileInput?.click();
-              }}
-            >
-              <Paperclip className="mr-2 h-4 w-4" />
-              Attach files
-            </Button>
-            <Input type="file" className="hidden" multiple onChange={handleAttachment} />
-          </label>
+    <>
+      <DialogTitle className="sr-only">Compose Email</DialogTitle>
+      <TooltipProvider>
+        <Card className="h-full w-full border-none shadow-none">
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold tracking-tight">New Message</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2">
+              <div className="relative">
+                <Input
+                  tabIndex={1}
+                  placeholder="To"
+                  value={toInput}
+                  onChange={(e) => {
+                    setToInput(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                />
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-auto rounded-md border border-input bg-background shadow-lg">
+                    {filteredSuggestions.map((email, index) => (
+                      <li
+                        key={index}
+                        onClick={() => {
+                          setToInput(email);
+                          setShowSuggestions(false);
+                        }}
+                        className="cursor-pointer p-2 hover:bg-muted"
+                      >
+                        {email}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <Input
+                placeholder="Subject"
+                defaultValue={subject || ""}
+                onChange={(e) => setSubject(e.target.value)}
+                tabIndex={2}
+              />
 
-          <div className="flex gap-2">
-            <Button tabIndex={5} variant="outline" onClick={onClose}>
-              Save as draft
-            </Button>
-            <Button
-              tabIndex={6}
-              onClick={() => {
-                // TODO: Implement send functionality
-                onClose();
-              }}
-            >
-              Send
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+              <div className="flex justify-end">
+                <ToggleGroup type="multiple">
+                  <ToggleGroupItem tabIndex={3} value="bold" onClick={() => insertFormat("bold")}>
+                    <Bold className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    tabIndex={4}
+                    value="italic"
+                    onClick={() => insertFormat("italic")}
+                  >
+                    <Italic className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem tabIndex={5} value="list" onClick={() => insertFormat("list")}>
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    tabIndex={6}
+                    value="ordered-list"
+                    onClick={() => insertFormat("ordered-list")}
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    tabIndex={7}
+                    onClick={() => insertFormat("link")}
+                  >
+                    <Link2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    tabIndex={8}
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            insertFormat(`![${file.name}](${reader.result})`);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      };
+                      input.click();
+                    }}
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                  </Button>
+                </ToggleGroup>
+              </div>
+
+              <div
+                ref={editorRef}
+                contentEditable
+                className="min-h-[300px] w-full resize-none overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                role="textbox"
+                aria-multiline="true"
+                tabIndex={9}
+                style={{
+                  overflowWrap: "break-word",
+                  wordWrap: "break-word",
+                  whiteSpace: "pre-wrap",
+                  maxWidth: "100%",
+                }}
+                onInput={() => {
+                  setMessageContent(editorRef.current?.innerHTML || "");
+                }}
+              />
+
+              {renderAttachments()}
+              <div className="mt-4 flex justify-between">
+                <label>
+                  <Button
+                    tabIndex={10}
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const fileInput = e.currentTarget.nextElementSibling as HTMLInputElement;
+                      fileInput?.click();
+                    }}
+                  >
+                    <Paperclip className="mr-2 h-4 w-4" />
+                    Attach files
+                  </Button>
+                  <Input type="file" className="hidden" multiple onChange={handleAttachment} />
+                </label>
+                <div className="flex gap-2">
+                  <Button tabIndex={12} onClick={handleSendEmail}>
+                    Send
+                    <Send className="ml-2 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipProvider>
+    </>
   );
 }
