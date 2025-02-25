@@ -18,7 +18,6 @@ import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import { TooltipPortal } from "@radix-ui/react-tooltip";
 import { Separator } from "@/components/ui/separator";
-import { DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendEmail } from "@/actions/send";
@@ -259,13 +258,12 @@ export function MailCompose({ onClose, replyTo }: MailComposeProps) {
 
   return (
     <>
-      <DialogTitle className="sr-only">Compose Email</DialogTitle>
       <TooltipProvider>
-        <Card className="h-full w-full border-none shadow-none">
-          <CardHeader>
+        <Card className="h-full w-[500px] border-none bg-offsetDark shadow-none">
+          <CardHeader className="px-4">
             <CardTitle className="text-2xl font-semibold tracking-tight">New Message</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4">
             <div className="grid gap-2">
               <div className="relative">
                 <Input

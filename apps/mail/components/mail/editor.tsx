@@ -104,7 +104,7 @@ export const MailEditor = () => {
   return (
     <EditorContent
       extensions={defaultExtensions}
-      className="w-full resize-none overflow-y-auto rounded-md border border-input bg-background p-4 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      className="w-full resize-none overflow-y-auto rounded-md border border-input bg-background p-4 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 h-72"
     >
       <EditorBubble className="flex w-fit max-w-[90vw] overflow-hidden rounded border border-muted bg-background shadow-xl">
         <NodeSelector open={openNode} onOpenChange={setOpenNode} />
