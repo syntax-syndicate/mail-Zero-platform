@@ -21,7 +21,7 @@ const getLogo = (mimetype: string, name?: string): string => {
     return "/assets/attachment-icons/audio.svg";
   } else if (mimetype.includes("video")) {
     return "/assets/attachment-icons/video.svg";
-  } else if (mimetype.includes("figma") && name?.includes(".fig")) {
+  } else if (mimetype.includes("zip") && name?.includes(".fig")) {
     return "/assets/attachment-icons/figma.svg";
   }
 
