@@ -12,7 +12,7 @@ const getLogo = (mimetype: string, name?: string): string => {
     return "/assets/attachment-icons/word.svg";
   } else if (mimetype.includes("presentationml") || mimetype.includes("powerpoint")) {
     return "/assets/attachment-icons/powerpoint.svg";
-  } else if (mimetype.includes("spreadsheetml") && mimetype.includes("excel")) {
+  } else if (mimetype.includes("spreadsheetml") || mimetype.includes("excel")) {
     return "/assets/attachment-icons/excel.svg";
   } else if (mimetype.includes("zip")) {
     return "/assets/attachment-icons/zip.svg";
