@@ -11,6 +11,18 @@ const getLogo = (mimetype: string): string => {
     return "/assets/attachment-icons/word.svg";
   } else if (mimetype.includes("presentationml") || mimetype.includes("powerpoint")) {
     return "/assets/attachment-icons/powerpoint.svg";
+  } else if (mimetype.includes("spreadsheetml") && mimetype.includes("excel")) {
+    return "/assets/attachment-icons/excel.svg";
+  } else if (mimetype.includes("zip")) {
+    return "/assets/attachment-icons/zip.svg";
+  } else if (mimetype.includes("rtf")) {
+    return "/assets/attachment-icons/rtf.svg";
+  } else if (mimetype.includes("audio")) {
+    return "/assets/attachment-icons/audio.svg";
+  } else if (mimetype.includes("video")) {
+    return "/assets/attachment-icons/video.svg";
+  } else if (mimetype.includes("figma")) {
+    return "/assets/attachment-icons/figma.svg";
   }
 
   return "";
