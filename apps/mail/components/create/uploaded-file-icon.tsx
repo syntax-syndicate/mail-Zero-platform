@@ -5,6 +5,7 @@ import Image from "next/image";
 import React from "react";
 
 const getLogo = (mimetype: string, name?: string): string => {
+  // console.log(mimetype, name);
   if (mimetype.includes("pdf")) {
     return "/assets/attachment-icons/pdf.svg";
   } else if (mimetype.includes("wordprocessingml") || mimetype.includes("msword")) {
@@ -21,7 +22,7 @@ const getLogo = (mimetype: string, name?: string): string => {
     return "/assets/attachment-icons/audio.svg";
   } else if (mimetype.includes("video")) {
     return "/assets/attachment-icons/video.svg";
-  } else if (mimetype.includes("zip") && name?.includes(".fig")) {
+  } else if (mimetype.includes("figma")) {
     return "/assets/attachment-icons/figma.svg";
   }
 
@@ -35,6 +36,7 @@ type Props = {
 };
 
 export const UploadedFileIcon = ({ removeAttachment, index, file }: Props) => {
+  console.log(file);
   return (
     <div className="relative h-24 w-full">
       {file.type.startsWith("image/") ? (
@@ -51,11 +53,7 @@ export const UploadedFileIcon = ({ removeAttachment, index, file }: Props) => {
         </>
       ) : (
         <div className="bg-muted/20 flex h-full w-full items-center justify-center">
-          {getLogo(file.type) ? (
-            <Image src={getLogo(file.type, file.name)} alt={file.name} width={48} height={48} />
-          ) : (
-            <FileIcon className="text-primary h-8 w-8" />
-          )}
+          <Image src={getLogo(file.type, file.name)} alt={file.name} width={48} height={48} />
           <Button
             variant="ghost"
             size="icon"
