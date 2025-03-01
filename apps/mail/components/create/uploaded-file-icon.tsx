@@ -5,7 +5,6 @@ import Image from "next/image";
 import React from "react";
 
 const getLogo = (mimetype: string, name?: string): string => {
-  // console.log(mimetype, name);
   if (mimetype.includes("pdf")) {
     return "/assets/attachment-icons/pdf.svg";
   } else if (mimetype.includes("wordprocessingml") || mimetype.includes("msword")) {
@@ -36,7 +35,6 @@ type Props = {
 };
 
 export const UploadedFileIcon = ({ removeAttachment, index, file }: Props) => {
-  console.log(file);
   return (
     <div className="relative h-24 w-full">
       {file.type.startsWith("image/") ? (
