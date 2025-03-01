@@ -1,10 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { FileIcon } from "lucide-react";
-import { X } from "lucide-react";
+import { FileIcon, X } from "lucide-react";
 import Image from "next/image";
 import React from "react";
 
-const getLogo = (mimetype: string, name?: string): string => {
+const getLogo = (mimetype: string): string => {
   if (mimetype.includes("pdf")) {
     return "/assets/attachment-icons/pdf.svg";
   } else if (mimetype.includes("wordprocessingml") || mimetype.includes("msword")) {
@@ -23,6 +22,8 @@ const getLogo = (mimetype: string, name?: string): string => {
     return "/assets/attachment-icons/video.svg";
   } else if (mimetype.includes("figma")) {
     return "/assets/attachment-icons/figma.svg";
+  } else if (mimetype.includes("csv")) {
+    return "/assets/attachment-icons/csv.svg";
   }
 
   return "";
@@ -51,7 +52,11 @@ export const UploadedFileIcon = ({ removeAttachment, index, file }: Props) => {
         </>
       ) : (
         <div className="bg-muted/20 flex h-full w-full items-center justify-center">
-          <Image src={getLogo(file.type, file.name)} alt={file.name} width={48} height={48} />
+          {getLogo(file.type) ? (
+            <Image src={getLogo(file.type)} alt={file.name} width={48} height={48} />
+          ) : (
+            <FileIcon className="text-primary h-8 w-8" />
+          )}
           <Button
             variant="ghost"
             size="icon"
