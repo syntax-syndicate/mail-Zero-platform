@@ -134,7 +134,7 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
           key={message.id}
           className={cn(
             "hover:bg-offsetLight hover:bg-primary/5 group relative flex cursor-pointer flex-col items-start overflow-clip rounded-lg border border-transparent px-4 py-3 text-left text-sm transition-all hover:opacity-100",
-            !message.unread && "opacity-50",
+            !hasUnread && "opacity-50",
             (isMailSelected || isMailBulkSelected) && "border-border bg-primary/5 opacity-100",
             isCompact && "py-2",
           )}
@@ -149,7 +149,7 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
             <div className="flex items-center gap-2">
               <p
                 className={cn(
-                  message.unread ? "font-bold" : "font-medium",
+                  hasUnread ? "font-bold" : "font-medium",
                   "text-md flex items-baseline gap-1 group-hover:opacity-100",
                 )}
               >
@@ -159,7 +159,7 @@ const Thread = ({ message: initialMessage, selectMode, onSelect, isCompact }: Th
                 {message.totalReplies !== 1 ? (
                   <span className="ml-0.5 text-xs opacity-70">{message.totalReplies}</span>
                 ) : null}
-                {message.unread ? (
+                {hasUnread ? (
                   <span className="ml-0.5 size-2 rounded-full bg-[#006FFE]" />
                 ) : null}
               </p>
