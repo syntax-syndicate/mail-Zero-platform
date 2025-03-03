@@ -243,7 +243,7 @@ export function Mail({ folder }: MailProps) {
                 defaultSize={75}
                 minSize={25}
               >
-                <div className="hidden h-[calc(100vh-(12px+14px))] flex-1 md:block relative top-2">
+                <div className="hidden h-[calc(100vh-(12px+14px))] flex-1 md:block relative">
                   <ThreadDisplay mail={mail.selected} onClose={handleClose} />
                 </div>
               </ResizablePanel>
