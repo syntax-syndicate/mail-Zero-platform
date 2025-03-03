@@ -136,7 +136,9 @@ export function Mail({ folder }: MailProps) {
               <div
                 className={cn(
                   "sticky top-0 z-10 flex items-center justify-between gap-1.5 border-b-2 p-2 transition-colors",
-                  isValidating ? "border-b-green-500" : "border-b-transparent",
+                  isValidating 
+                    ? "border-b-[linear-gradient(90deg,rgba(255,213,208,1)_0%,rgba(219,255,228,1)_50%,rgba(226,214,255,1)_100%)]" 
+                    : "border-b-transparent",
                 )}
               >
                 <SidebarToggle className="h-fit px-2" />
