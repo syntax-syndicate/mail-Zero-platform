@@ -4,7 +4,7 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { AlignVerticalSpaceAround, ArchiveX, BellOff, SearchIcon, X, Inbox, AlertTriangle, Tag, User, Bell } from "lucide-react";
+import { ArchiveX, BellOff, SearchIcon, X, Inbox, AlertTriangle, Tag, User, Bell } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { ThreadDisplay, ThreadDemo } from "@/components/mail/thread-display";
 import { MailList, MailListDemo } from "@/components/mail/mail-list";
@@ -397,28 +397,28 @@ function MailCategoryTabs({ iconsOnly = false }: { iconsOnly?: boolean }) {
     },
     {
       name: "Important",
-      searchValue: "IMPORTANT",
+      searchValue: "is:important",
       icon: <AlertTriangle className="h-4 w-4" />,
       colors:
         "border-0 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/20 dark:text-amber-500 dark:hover:bg-amber-900/30",
     },
     {
       name: "Personal",
-      searchValue: "PERSONAL",
+      searchValue: "is:personal",
       icon: <User className="h-4 w-4" />,
       colors:
         "border-0 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-500 dark:hover:bg-green-900/30",
     },
     {
       name: "Updates",
-      searchValue: "UPDATES",
+      searchValue: "is:updates",
       icon: <Bell className="h-4 w-4" />,
       colors:
         "border-0 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/20 dark:text-purple-500 dark:hover:bg-purple-900/30",
     },
     {
       name: "Promotions",
-      searchValue: "PROMOTIONS",
+      searchValue: "is:promotions",
       icon: <Tag className="h-4 w-4 rotate-90" />,
       colors:
         "border-0 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-500 dark:hover:bg-red-900/30",
@@ -429,11 +429,8 @@ function MailCategoryTabs({ iconsOnly = false }: { iconsOnly?: boolean }) {
 
   useEffect(() => {
     if (activeTab) {
-      const value =
-        activeTab.name === "Primary" ? "" : `has:${activeTab.searchValue.toLowerCase()}`;
-
       setSearchValue({
-        value,
+        value: activeTab.searchValue,
         highlight: "",
         folder: "",
       });
