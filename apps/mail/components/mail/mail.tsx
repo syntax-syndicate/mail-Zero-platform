@@ -14,7 +14,6 @@ import { useSearchValue } from "@/hooks/use-search-value";
 import { useMail } from "@/components/mail/use-mail";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useParams, useSearchParams } from "next/navigation";
 import { useThreads } from "@/hooks/use-threads";
 import { Button } from "@/components/ui/button";
 import { useHotKey } from "@/hooks/use-hot-key";
