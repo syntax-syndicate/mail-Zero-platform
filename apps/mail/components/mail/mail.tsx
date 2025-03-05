@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { AlignVerticalSpaceAround, ArchiveX, BellOff, SearchIcon, X, Inbox, Tag, Users, AlertTriangle, MessageSquare, User, Bell } from "lucide-react";
-import { useState, useCallback, useMemo, useEffect, ReactNode, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, useRef } from "react";
 import { ThreadDisplay, ThreadDemo } from "@/components/mail/thread-display";
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useSearchValue } from "@/hooks/use-search-value";
