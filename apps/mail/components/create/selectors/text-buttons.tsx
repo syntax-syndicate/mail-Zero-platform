@@ -1,6 +1,3 @@
-
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import {
   MessageSquare,
   FileText,
@@ -39,8 +36,8 @@ export const TextButtons = () => {
   ]
   
   return (
-    <div className='flex'>
-      {items.map(item => (
+    <div className="flex">
+      {items.map((item) => (
         <EditorBubbleItem
           key={item.name}
           onSelect={() => {
@@ -58,5 +55,5 @@ export const TextButtons = () => {
         </EditorBubbleItem>
       ))}
     </div>
-  )
-}
+  );
+};
