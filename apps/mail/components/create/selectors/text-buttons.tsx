@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -11,6 +12,8 @@ import Image from 'next/image'
 
 export const TextButtons = () => {
   const { editor } = useEditor()
+  const { toggleOpen, setPosition } = useAIInline()
+  
   if (!editor) return null
   
   // Define AI action handlers
