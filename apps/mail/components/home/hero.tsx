@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import axios from "axios";
 import { z } from "zod";
+import { Google } from "../icons/icons";
 
 const betaSignupSchema = z.object({
   email: z.string().email().min(9),
@@ -84,15 +85,15 @@ export default function Hero() {
 
   return (
     <div className="animate-fade-in mx-auto w-full pt-20 md:px-0 md:pt-20">
-      <p className="text-center text-4xl font-semibold leading-tight tracking-[-0.03em] text-gray-900 dark:text-white sm:text-6xl md:px-0">
+      <p className="text-center text-4xl max-w-xl mx-auto font-black leading-tight tracking-[-0.03em] text-gray-900 dark:text-white sm:text-7xl md:px-0">
         The future of email is here
       </p>
-      <div className="mx-auto w-full max-w-4xl">
+      {/* <div className="mx-auto w-full max-w-4xl">
         <Balancer className="text-gray-600 dark:text-shinyGray mx-auto mt-3 text-center text-[15px] leading-tight sm:text-[22px] ">
           Experience email the way you want with <span className="font-mono">0</span> – the first
           open source email app that puts your privacy and safety first.
         </Balancer>
-      </div>
+      </div> */}
 
       <Card className="mt-4 w-full border-none bg-transparent shadow-none">
         <CardContent className="flex flex-col items-center justify-center px-0">
@@ -103,25 +104,28 @@ export default function Hero() {
                 We'll let you know when we're ready to revolutionize your email experience.
               </p>
             </div>
-          ) : process.env.NODE_ENV === "development" ? (
+          ) : process.env.NODE_ENV !== "development" ? (
             <div className="flex items-center justify-center gap-4">
               <Button
                 variant="outline"
-                className="hover:bg-gray-100 dark:hover:bg-accent flex h-[40px] w-[170px] items-center justify-center rounded-md bg-white dark:bg-black text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-white"
+                className=" flex items-center justify-center h-[45px] px-12 rounded-[10px] bg-white dark:bg-black text-gray-900 dark:text-white hover:text-gray-900 dark:hover:text-white"
                 asChild
               >
                 <Link href="/login">
                   {" "}
-                  <Image src="/white-icon.svg" alt="Email" width={15} height={15} className="dark:invert-0 invert" />
-                  Start Emailing
+                  <Image src="/white-icon.svg" alt="Email" width={15} height={15} className="dark:invert-0 invert mr-2" />
+                  <p className="text-sm font-semibold">Start with Zero</p>
                 </Link>
               </Button>
               <Button
-                className="group h-[40px] w-[170px] rounded-md bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white"
+                variant="outline"
+                className="flex items-center justify-center h-[45px] px-10 rounded-[10px] bg-white hover:bg-white text-gray-900  hover:text-gray-900 "
                 asChild
               >
-                <Link target="_blank" href="https://cal.link/0-email">
-                  Contact Us
+                <Link href="/login">
+                  {" "}
+                  <Google className="size-12 mr-2" />
+                 <p className="text-sm font-semibold">Start with Google</p>
                 </Link>
               </Button>
             </div>
@@ -139,8 +143,8 @@ export default function Hero() {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="you@example.com"
-                          className="placeholder:text-sm md:w-80"
+                          placeholder="nizzy@example.com"
+                          className="placeholder:text-sm md:w-72 rounded-[10px] bg-black h-[45px]"
                           {...field}
                         />
                       </FormControl>
@@ -148,7 +152,7 @@ export default function Hero() {
                   )}
                 />
                 <div>
-                  <Button type="submit" className="w-full px-4 compose-gradient-animated" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full px-6 font-bold text-xs" disabled={isSubmitting}>
                     Join waitlist
                   </Button>
                 </div>
@@ -156,7 +160,7 @@ export default function Hero() {
             </Form>
           )}
 
-          {signupCount !== null && (
+          {/* {signupCount !== null && (
             <div className="text-gray-600 dark:text-shinyGray mt-4 text-center text-sm">
               <span className="font-semibold text-gray-900 dark:text-white">
                 <AnimatedNumber
@@ -169,7 +173,7 @@ export default function Hero() {
               </span>{" "}
               people have already joined the waitlist
             </div>
-          )}
+          )} */}
         </CardContent>
       </Card>
     </div>

@@ -23,14 +23,8 @@ export default function Navbar() {
 
   return (
     <div className="mx-auto flex w-full items-center justify-between p-4 px-3 lg:px-4">
-      <Link href="/">
-        <Image
-          src="/white-icon.svg"
-          alt="zerodotemail"
-          className="h-6 w-6 invert dark:invert-0"
-          width={180}
-          height={180}
-        />
+      <Link href="/" className="text-3xl font-black">
+        Zero
       </Link>
       {/* Mobile Navigation */}
       <div className="lg:hidden">
@@ -76,17 +70,12 @@ export default function Navbar() {
       {process.env.NODE_ENV === "development" ? (
         <>
           <div className="hidden items-center gap-4 lg:flex">
-            <Link
-              href="login"
-              className="text-sm text-gray-800 transition-opacity hover:opacity-80 dark:bg-gradient-to-r dark:from-gray-300 dark:via-gray-100 dark:to-gray-200 dark:bg-clip-text dark:text-transparent"
-            >
-              Sign in
-            </Link>
+            
             <Button
-              className="h-[32px] w-[110px] rounded-md bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90"
+              className="h-[38px] px-5 rounded-[10px] bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90"
               asChild
             >
-              <Link href="/login">Get Started</Link>
+              <Link href="/login"><p className="text-xs font-[700]">Get Started With Zero</p></Link>
             </Button>
           </div>
         </>
