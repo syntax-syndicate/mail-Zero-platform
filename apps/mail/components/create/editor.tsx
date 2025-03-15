@@ -291,6 +291,11 @@ export default function Editor({
     }
   };
 
+  // Toggle AI menu
+  const toggleAIMenu = () => {
+    dispatch({ type: "TOGGLE_AI", payload: !openAI });
+  };
+
   return (
     <div
       className={`relative w-full max-w-[450px] sm:max-w-[600px] ${className || ""}`}
