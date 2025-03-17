@@ -437,27 +437,23 @@ export default function Editor({
 	}, [initialValue]);
 
 	// Fix useImperativeHandle type errors
-	React.useImperativeHandle(
-		editorRef,
-		() => {
-			// Only extend the current editor if it exists
-			if (!editorRef.current) {
-				return {} as TiptapEditor;
-			}
-			// Otherwise return the editor with our additional methods
-			return {
-				...editorRef.current,
-				clearContent: clearEditorContent,
-			} as TiptapEditor;
-		},
-		[clearEditorContent]
-	);
+	React.useImperativeHandle(editorRef, () => {
+		// Only extend the current editor if it exists
+		if (!editorRef.current) {
+			return {} as TiptapEditor;
+		}
+		// Otherwise return the editor with our additional methods
+		return {
+			...editorRef.current,
+			clearContent: clearEditorContent,
+		} as TiptapEditor;
+	}, [clearEditorContent]);
 
 	// Handle command+enter or ctrl+enter
 	const handleCommandEnter = React.useCallback(() => {
 		// Call the parent's onCommandEnter
 		onCommandEnter?.();
-		
+
 		// Clear the editor content after sending
 		setTimeout(() => {
 			if (editorRef.current?.commands?.clearContent) {

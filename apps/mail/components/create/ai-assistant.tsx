@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateAIEmailContent } from '@/actions/ai';
 import { useState, useEffect, useRef } from 'react';
 import { generateConversationId } from '@/lib/ai';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
 import { type JSONContent } from 'novel';
 import { toast } from 'sonner';
@@ -226,7 +226,7 @@ export const AIAssistant = ({
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isAskingQuestion, setIsAskingQuestion] = useState(false);
 	const [suggestedSubject, setSuggestedSubject] = useState<string>('');
-	
+
 	// Generate conversation ID immediately without useEffect
 	const conversationId = generateConversationId();
 

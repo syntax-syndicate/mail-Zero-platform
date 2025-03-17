@@ -52,8 +52,10 @@ export function CreateEmail() {
 	}, [session, connections]);
 
 	// User information for context
-	const userName = activeAccount?.name || session?.activeConnection?.name || session?.user.name || '';
-	const userEmail = activeAccount?.email || session?.activeConnection?.email || session?.user.email || '';
+	const userName =
+		activeAccount?.name || session?.activeConnection?.name || session?.user.name || '';
+	const userEmail =
+		activeAccount?.email || session?.activeConnection?.email || session?.user.email || '';
 
 	// Initialize the editor with default content if not loading a draft
 	React.useEffect(() => {
@@ -241,14 +243,14 @@ export function CreateEmail() {
 			});
 
 			toast.success(t('pages.createEmail.emailSentSuccessfully'));
-			
+
 			// Reset all form fields
 			setToInput('');
 			setToEmails([]);
 			setSubjectInput('');
 			setAttachments([]);
 			setMessageContent('');
-			
+
 			// Reset the editor content by setting a new default value
 			setDefaultValue({
 				type: 'doc',
@@ -259,10 +261,10 @@ export function CreateEmail() {
 					},
 				],
 			});
-			
+
 			// Force remount the editor component to ensure it resets properly
 			setResetEditorKey((prev) => prev + 1);
-			
+
 			// Reset unsaved changes flag
 			setHasUnsavedChanges(false);
 		} catch (error) {
