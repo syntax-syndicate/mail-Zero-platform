@@ -39,6 +39,7 @@ export function CreateEmail() {
 	const [messageContent, setMessageContent] = React.useState('');
 	const [draftId, setDraftId] = useQueryState('draftId');
 	const [defaultValue, setDefaultValue] = React.useState<JSONContent | null>(null);
+	const [editorReady, setEditorReady] = React.useState(false);
 
 	// Get user context from session and connections
 	const { data: session } = useSession();
@@ -47,12 +48,29 @@ export function CreateEmail() {
 	// Get the active account information
 	const activeAccount = React.useMemo(() => {
 		if (!session) return null;
-		return connections?.find((connection) => connection.id === session?.connectionId);
+		return connections?.find((connection) => connection.id === session?.activeConnection?.id);
 	}, [session, connections]);
 
 	// User information for context
-	const userName = activeAccount?.name || session?.user.name || '';
-	const userEmail = activeAccount?.email || session?.user.email || '';
+	const userName = activeAccount?.name || session?.activeConnection?.name || session?.user.name || '';
+	const userEmail = activeAccount?.email || session?.activeConnection?.email || session?.user.email || '';
+
+	// Initialize the editor with default content if not loading a draft
+	React.useEffect(() => {
+		if (!draftId && !defaultValue) {
+			// Set initial empty content
+			setDefaultValue({
+				type: 'doc',
+				content: [
+					{
+						type: 'paragraph',
+						content: [],
+					},
+				],
+			});
+			setEditorReady(true);
+		}
+	}, [draftId, defaultValue]);
 
 	React.useEffect(() => {
 		const loadDraft = async () => {
@@ -223,12 +241,30 @@ export function CreateEmail() {
 			});
 
 			toast.success(t('pages.createEmail.emailSentSuccessfully'));
+			
+			// Reset all form fields
 			setToInput('');
 			setToEmails([]);
 			setSubjectInput('');
 			setAttachments([]);
-			setResetEditorKey((prev) => prev + 1);
 			setMessageContent('');
+			
+			// Reset the editor content by setting a new default value
+			setDefaultValue({
+				type: 'doc',
+				content: [
+					{
+						type: 'paragraph',
+						content: [],
+					},
+				],
+			});
+			
+			// Force remount the editor component to ensure it resets properly
+			setResetEditorKey((prev) => prev + 1);
+			
+			// Reset unsaved changes flag
+			setHasUnsavedChanges(false);
 		} catch (error) {
 			console.error('Error sending email:', error);
 			toast.error(t('pages.createEmail.failedToSendEmail'));
@@ -370,10 +406,16 @@ export function CreateEmail() {
 									{defaultValue && (
 										<Editor
 											initialValue={defaultValue}
-											onChange={(newContent) => setMessageContent(newContent)}
+											onChange={(newContent) => {
+												setMessageContent(newContent);
+												if (newContent.trim() !== '') {
+													setHasUnsavedChanges(true);
+												}
+											}}
 											key={resetEditorKey}
 											placeholder={t('pages.createEmail.writeYourMessageHere')}
 											onAttachmentsChange={setAttachments}
+											onCommandEnter={handleSendEmail}
 										/>
 									)}
 								</div>

@@ -408,13 +408,63 @@ export default function Editor({
 		dispatch({ type: 'TOGGLE_AI', payload: !openAI });
 	};
 
+	// Function to clear editor content
+	const clearEditorContent = React.useCallback(() => {
+		if (editorRef.current) {
+			editorRef.current.commands.clearContent(true);
+			// Also update our reference and notify parent
+			contentRef.current = '';
+			onChange('');
+		}
+	}, [onChange]);
+
 	// Reset editor content when initialValue changes
 	React.useEffect(() => {
+		// We need to make sure both the editor reference exists AND initialValue is provided
 		if (editorRef.current && initialValue) {
-			// Set the editor content to the initial value
-			editorRef.current.commands.setContent(initialValue);
+			try {
+				// Make sure the editor is ready before setting content
+				setTimeout(() => {
+					// Double-check that the editor still exists in case of unmounting
+					if (editorRef.current?.commands?.setContent) {
+						editorRef.current.commands.setContent(initialValue);
+					}
+				}, 0);
+			} catch (error) {
+				console.error('Error setting editor content:', error);
+			}
 		}
 	}, [initialValue]);
+
+	// Fix useImperativeHandle type errors
+	React.useImperativeHandle(
+		editorRef,
+		() => {
+			// Only extend the current editor if it exists
+			if (!editorRef.current) {
+				return {} as TiptapEditor;
+			}
+			// Otherwise return the editor with our additional methods
+			return {
+				...editorRef.current,
+				clearContent: clearEditorContent,
+			} as TiptapEditor;
+		},
+		[clearEditorContent]
+	);
+
+	// Handle command+enter or ctrl+enter
+	const handleCommandEnter = React.useCallback(() => {
+		// Call the parent's onCommandEnter
+		onCommandEnter?.();
+		
+		// Clear the editor content after sending
+		setTimeout(() => {
+			if (editorRef.current?.commands?.clearContent) {
+				clearEditorContent();
+			}
+		}, 200);
+	}, [onCommandEnter, clearEditorContent]);
 
 	return (
 		<div
@@ -430,15 +480,7 @@ export default function Editor({
 				if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
 					e.preventDefault();
 					e.stopPropagation();
-					onCommandEnter?.();
-
-					// Clear the editor content after sending
-					if (editorRef.current) {
-						setTimeout(() => {
-							// Use setTimeout to ensure the email is sent before clearing
-							editorRef.current?.commands.clearContent();
-						}, 100);
-					}
+					handleCommandEnter();
 				}
 			}}
 		>
@@ -455,16 +497,7 @@ export default function Editor({
 								// Handle Command+Enter (Mac) or Ctrl+Enter (Windows/Linux)
 								if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
 									event.preventDefault();
-									onCommandEnter?.();
-
-									// Clear the editor content after sending
-									if (editorRef.current) {
-										setTimeout(() => {
-											// Use setTimeout to ensure the email is sent before clearing
-											editorRef.current?.commands.clearContent();
-										}, 100);
-									}
-
+									handleCommandEnter();
 									return true;
 								}
 								return handleCommandNavigation(event);

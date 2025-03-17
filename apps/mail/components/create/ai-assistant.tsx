@@ -1,12 +1,11 @@
 import { Sparkles, X, Check, RefreshCw } from 'lucide-react';
-import { useWindowSize } from '@/lib/hooks/use-window-size';
-import { useConnections } from '@/hooks/use-connections';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateAIEmailContent } from '@/actions/ai';
 import { useState, useEffect, useRef } from 'react';
 import { generateConversationId } from '@/lib/ai';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
 import { type JSONContent } from 'novel';
 import { toast } from 'sonner';
@@ -226,26 +225,22 @@ export const AIAssistant = ({
 	const [showActions, setShowActions] = useState(false);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isAskingQuestion, setIsAskingQuestion] = useState(false);
-	const [conversationId, setConversationId] = useState<string>('');
 	const [suggestedSubject, setSuggestedSubject] = useState<string>('');
+	
+	// Generate conversation ID immediately without useEffect
+	const conversationId = generateConversationId();
 
 	// Refs
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	// Hooks
-	const { width } = useWindowSize();
+	const isMobile = useIsMobile();
 	const { data: session } = useSession();
-	const { data: connections } = useConnections();
 
-	// User context
-	const activeAccount = connections?.find((c) => c.id === session?.connectionId);
-	const userName = userContext?.name || activeAccount?.name || session?.user.name || '';
-	const userEmail = userContext?.email || activeAccount?.email || session?.user.email || '';
-
-	// Initialize conversation ID
-	useEffect(() => {
-		setConversationId(generateConversationId());
-	}, []);
+	// User context using activeConnection from session
+	const activeConnection = session?.activeConnection;
+	const userName = userContext?.name || activeConnection?.name || session?.user.name || '';
+	const userEmail = userContext?.email || activeConnection?.email || session?.user.email || '';
 
 	// Focus input when expanded
 	useEffect(() => {
@@ -395,7 +390,7 @@ export const AIAssistant = ({
 			<div
 				className="relative inline-block"
 				style={{
-					width: isExpanded ? (width < 640 ? '200px' : '400px') : '32px', // Responsive width
+					width: isExpanded ? (isMobile ? '200px' : '400px') : '32px', // Responsive width
 					height: '32px',
 					minHeight: '32px',
 					maxWidth: '100vw', // Prevent extending beyond viewport
@@ -426,7 +421,7 @@ export const AIAssistant = ({
 					{isExpanded && (
 						<motion.div
 							variants={animations.container}
-							custom={width}
+							custom={isMobile ? 400 : 800}
 							initial="initial"
 							animate="animate"
 							exit="exit"
