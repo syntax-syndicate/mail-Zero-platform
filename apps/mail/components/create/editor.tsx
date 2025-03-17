@@ -428,7 +428,7 @@ export default function Editor({
 					// Double-check that the editor still exists in case of unmounting
 					if (editorRef.current?.commands?.setContent) {
 						editorRef.current.commands.setContent(initialValue);
-						
+
 						// Important: after setting content, manually trigger an update
 						// to ensure the parent component gets the latest content
 						const html = editorRef.current.getHTML();

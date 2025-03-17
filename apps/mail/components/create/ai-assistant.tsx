@@ -343,7 +343,7 @@ export const AIAssistant = ({
 		if (generatedContent && onContentGenerated) {
 			// Extract the actual content from the JSON structure
 			const actualContent = generatedContent.content;
-			
+
 			// First update subject if available
 			if (suggestedSubject) {
 				// Pass both the JSON content for the editor and the plaintext content for validation
@@ -351,7 +351,7 @@ export const AIAssistant = ({
 			} else {
 				onContentGenerated(generatedContent.jsonContent);
 			}
-			
+
 			// Add confirmation message
 			addMessage('system', 'Email content applied successfully.', 'system');
 			resetStates();
