@@ -428,13 +428,19 @@ export default function Editor({
 					// Double-check that the editor still exists in case of unmounting
 					if (editorRef.current?.commands?.setContent) {
 						editorRef.current.commands.setContent(initialValue);
+						
+						// Important: after setting content, manually trigger an update
+						// to ensure the parent component gets the latest content
+						const html = editorRef.current.getHTML();
+						contentRef.current = html;
+						onChange(html);
 					}
 				}, 0);
 			} catch (error) {
 				console.error('Error setting editor content:', error);
 			}
 		}
-	}, [initialValue]);
+	}, [initialValue, onChange]);
 
 	// Fix useImperativeHandle type errors
 	React.useImperativeHandle(editorRef, () => {

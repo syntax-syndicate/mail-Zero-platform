@@ -445,12 +445,33 @@ export function CreateEmail() {
 									try {
 										// Update the editor content with the AI-generated content
 										setDefaultValue(jsonContent);
-
-										// Update the subject if provided
-										if (newSubject && (!subjectInput || subjectInput.trim() === '')) {
-											console.log('CreateEmail: Setting new subject from AI', newSubject);
-											setSubjectInput(newSubject);
+										
+										// Extract and set the text content for validation purposes
+										// This ensures the submit button is enabled immediately
+										if (jsonContent.content && jsonContent.content.length > 0) {
+											// Extract text content from JSON structure recursively
+											const extractTextContent = (node: any): string => {
+												if (!node) return '';
+												
+												if (node.text) return node.text;
+												
+												if (node.content && Array.isArray(node.content)) {
+													return node.content.map(extractTextContent).join(' ');
+												}
+												
+												return '';
+											};
+											
+											// Process all content nodes
+											const textContent = jsonContent.content.map(extractTextContent).join('\n').trim();
+											setMessageContent(textContent);
 										}
+                                        
+                                        // Update the subject if provided
+                                        if (newSubject && (!subjectInput || subjectInput.trim() === '')) {
+                                            console.log('CreateEmail: Setting new subject from AI', newSubject);
+                                            setSubjectInput(newSubject);
+                                        }
 
 										// Mark as having unsaved changes
 										setHasUnsavedChanges(true);
@@ -475,7 +496,7 @@ export function CreateEmail() {
 							disabled={
 								!toEmails.length ||
 								!messageContent.trim() ||
-								messageContent === JSON.stringify(defaultValue)
+								!subjectInput.trim()
 							}
 						>
 							<ArrowUpIcon className="h-4 w-4" />
