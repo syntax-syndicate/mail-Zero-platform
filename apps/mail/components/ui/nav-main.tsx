@@ -5,14 +5,15 @@ import { useRef, useCallback } from 'react';
 import * as React from 'react';
 import Link from 'next/link';
 
-import { SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from './sidebar';
-import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { MessageKeys, useTranslations } from 'next-intl';
-import { MessageKey } from '@/config/navigation';
-import { Badge } from '@/components/ui/badge';
-import { useStats } from '@/hooks/use-stats';
-import { BASE_URL } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./sidebar";
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MessageKeys, useTranslations } from "next-intl";
+import { MessageKey } from "@/config/navigation";
+import { Badge } from "@/components/ui/badge";
+import { useStats } from "@/hooks/use-stats";
+import { useFeaturebase } from "@/hooks/use-featurebase";
+import { BASE_URL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
 	ref?: React.Ref<SVGSVGElement>;
@@ -21,18 +22,19 @@ interface IconProps extends React.SVGProps<SVGSVGElement> {
 }
 
 interface NavItemProps {
-	title: string;
-	url: string;
-	icon?: React.ComponentType<IconProps>;
-	badge?: number;
-	isActive?: boolean;
-	isExpanded?: boolean;
-	onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
-	suffix?: React.ComponentType<IconProps>;
-	isBackButton?: boolean;
-	isSettingsButton?: boolean;
-	isSettingsPage?: boolean;
-	disabled?: boolean;
+  title: string;
+  url: string;
+  icon?: React.ComponentType<IconProps>;
+  badge?: number;
+  isActive?: boolean;
+  isExpanded?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  suffix?: React.ComponentType<IconProps>;
+  isBackButton?: boolean;
+  isSettingsButton?: boolean;
+  isSettingsPage?: boolean;
+  disabled?: boolean;
+  isFeaturebaseButton?: boolean;
 }
 
 interface NavMainProps {
@@ -49,8 +51,9 @@ type IconRefType = SVGSVGElement & {
 };
 
 export function NavMain({ items }: NavMainProps) {
-	const pathname = usePathname();
-	const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { openFeaturebase } = useFeaturebase();
 
 	/**
 	 * Validates URLs to prevent open redirect vulnerabilities.
@@ -74,11 +77,16 @@ export function NavMain({ items }: NavMainProps) {
 		}
 	}, []);
 
-	const getHref = useCallback(
-		(item: NavItemProps) => {
-			// Get the current 'from' parameter
-			const currentFrom = searchParams.get('from');
-			const category = searchParams.get('category');
+  const getHref = useCallback(
+    (item: NavItemProps) => {
+      // Get the current 'from' parameter
+      const currentFrom = searchParams.get("from");
+      const category = searchParams.get("category");
+
+      // Handle Featurebase button
+      if (item.isFeaturebaseButton) {
+        return "#";
+      }
 
 			// Handle settings navigation
 			if (item.isSettingsButton) {
@@ -173,30 +181,42 @@ export function NavMain({ items }: NavMainProps) {
 }
 
 function NavItem(item: NavItemProps & { href: string }) {
-	const iconRef = useRef<IconRefType>(null);
-	const { data: stats } = useStats();
+  const iconRef = useRef<IconRefType>(null);
+  const { data: stats } = useStats();
+  const { openFeaturebase } = useFeaturebase();
+  const t = useTranslations();
 
-	const t = useTranslations();
+  if (item.disabled) {
+    return (
+      <SidebarMenuButton
+        tooltip={item.title}
+        className="flex cursor-not-allowed items-center opacity-50"
+      >
+        {item.icon && <item.icon ref={iconRef} className="relative mr-2.5 h-3 w-3.5" />}
+        <p className="mt-0.5 text-[13px]">{t(item.title as MessageKey)}</p>
+      </SidebarMenuButton>
+    );
+  }
 
-	if (item.disabled) {
-		return (
-			<SidebarMenuButton
-				tooltip={item.title}
-				className="flex cursor-not-allowed items-center opacity-50"
-			>
-				{item.icon && <item.icon ref={iconRef} className="relative mr-2.5 h-3 w-3.5" />}
-				<p className="mt-0.5 text-[13px]">{t(item.title as MessageKey)}</p>
-			</SidebarMenuButton>
-		);
-	}
+  // Handle Featurebase button click
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (item.isFeaturebaseButton) {
+      e.preventDefault();
+      openFeaturebase();
+    }
+    
+    if (item.onClick) {
+      item.onClick(e);
+    }
+  };
 
-	// Apply animation handlers to all buttons including back buttons
-	const linkProps = {
-		href: item.href,
-		onClick: item.onClick,
-		onMouseEnter: () => iconRef.current?.startAnimation?.(),
-		onMouseLeave: () => iconRef.current?.stopAnimation?.(),
-	};
+  // Apply animation handlers to all buttons including back buttons
+  const linkProps = {
+    href: item.href,
+    onClick: handleClick,
+    onMouseEnter: () => iconRef.current?.startAnimation?.(),
+    onMouseLeave: () => iconRef.current?.stopAnimation?.(),
+  };
 
 	const buttonContent = (
 		<SidebarMenuButton

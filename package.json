@@ -35,5 +35,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1"
+  }
 }

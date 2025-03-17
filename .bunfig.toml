@@ -1,0 +1,3 @@
+[install]
+# Enable workspace features
+workspaces = true 
