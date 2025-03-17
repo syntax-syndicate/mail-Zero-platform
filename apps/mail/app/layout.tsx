@@ -35,28 +35,28 @@ export default async function RootLayout({
 	const locale = await getLocale();
 	const messages = await getMessages();
 
-  return (
-    <html lang={locale} suppressHydrationWarning>
-      <head>
-        <meta name="x-user-country" content={(await headers()).get("x-user-country") || ""} />
-        <meta
-          name="x-user-eu-region"
-          content={(await headers()).get("x-user-eu-region") || "false"}
-        />
-      </head>
-      <body className={cn(geistSans.variable, geistMono.variable, "antialiased")}>
-        <Providers attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <NextIntlClientProvider messages={messages}>
-            <CookieProvider>
-              {children}
-              {cookies}
-              <Toast />
-              <Analytics />
-              {/* {isEuRegion && <CookieConsent />} */}
-            </CookieProvider>
-          </NextIntlClientProvider>
-        </Providers>
-      </body>
-    </html>
-  );
+	return (
+		<html lang={locale} suppressHydrationWarning>
+			<head>
+				<meta name="x-user-country" content={(await headers()).get('x-user-country') || ''} />
+				<meta
+					name="x-user-eu-region"
+					content={(await headers()).get('x-user-eu-region') || 'false'}
+				/>
+			</head>
+			<body className={cn(geistSans.variable, geistMono.variable, 'antialiased')}>
+				<Providers attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+					<NextIntlClientProvider messages={messages}>
+						<CookieProvider>
+							{children}
+							{cookies}
+							<Toast />
+							<Analytics />
+							{/* {isEuRegion && <CookieConsent />} */}
+						</CookieProvider>
+					</NextIntlClientProvider>
+				</Providers>
+			</body>
+		</html>
+	);
 }
