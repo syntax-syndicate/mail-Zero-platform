@@ -33,8 +33,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AnyExtension, Editor as TiptapEditor, useCurrentEditor } from '@tiptap/react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { TextButtons } from '@/components/create/selectors/text-buttons';
 import { suggestionItems } from '@/components/create/slash-command';
 import { defaultExtensions } from '@/components/create/extensions';
