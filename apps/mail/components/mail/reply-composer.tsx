@@ -1,9 +1,7 @@
-import { type Dispatch, type SetStateAction, useRef, useState, useEffect } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { UploadedFileIcon } from '@/components/create/uploaded-file-icon';
-import { ArrowUp, Paperclip, Reply, X, Plus } from 'lucide-react';
+import { type Dispatch, type SetStateAction, useRef, useState, useEffect, useCallback } from 'react';
+import { type JSONContent } from 'novel';
+import { ArrowUp, Paperclip, Reply, X, Plus, Sparkles } from 'lucide-react';
 import { cleanEmailAddress, truncateFileName } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 import Editor from '@/components/create/editor';
 import { Button } from '@/components/ui/button';
 import type { ParsedMessage } from '@/types';
@@ -11,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { sendEmail } from '@/actions/send';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { formatThreadContext } from '@/lib/ai';
 
 interface ReplyComposeProps {
 	emailData: ParsedMessage[];
@@ -22,10 +21,14 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 	const editorRef = useRef<HTMLTextAreaElement>(null);
 	const [attachments, setAttachments] = useState<File[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
-	const [messageContent, setMessageContent] = useState('');
+	const [messageContent, setMessageContent] = useState<string | JSONContent>('');
 	const [isComposerOpen, setIsComposerOpen] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isEditorFocused, setIsEditorFocused] = useState(false);
+	const [aiSuggestion, setAiSuggestion] = useState('');
+	const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+	// State to track editor content height
+	const [editorHeight, setEditorHeight] = useState(500); // Default height
 	const t = useTranslations();
 
 	// Use external state if provided, otherwise use internal state
@@ -37,6 +40,13 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 			setIsComposerOpen(value);
 		}
 	};
+	
+	// Reset editor height when composer is opened
+	useEffect(() => {
+		if (composerIsOpen) {
+			setEditorHeight(500); // Reset to default height
+		}
+	}, [composerIsOpen]);
 
 	// Handle keyboard shortcuts for sending email
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -98,16 +108,18 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 	};
 
 	const constructReplyBody = (
-		formattedMessage: string,
+		formattedMessage: string | JSONContent,
 		originalDate: string,
 		originalSender: { name?: string; email?: string } | undefined,
 		cleanedToEmail: string,
 		quotedMessage?: string,
 	) => {
+		// Convert JSONContent to string if needed
+		const messageStr = typeof formattedMessage === 'string' ? formattedMessage : JSON.stringify(formattedMessage);
 		return `
       <div style="font-family: Arial, sans-serif;">
         <div style="margin-bottom: 20px;">
-          ${formattedMessage}
+          ${messageStr}
         </div>
         <div style="padding-left: 1em; margin-top: 1em; border-left: 2px solid #ccc; color: #666;">
           <div style="margin-bottom: 1em;">
@@ -213,6 +225,175 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 
 	// Check if form is valid for submission
 	const isFormValid = !isMessageEmpty || attachments.length > 0;
+	
+	// Track aiSuggestion changes
+	useEffect(() => {
+		console.log('aiSuggestion state changed:', aiSuggestion);
+	}, [aiSuggestion]);
+
+	// Function to get AI suggestion
+	const handleGetAISuggestion = useCallback(async () => {
+		if (isLoadingSuggestion) return;
+		
+		setIsLoadingSuggestion(true);
+		setAiSuggestion('');
+		
+		try {
+			// Format the thread context for better AI understanding
+			const threadContext = formatThreadContext(emailData);
+			
+			// Prepare recipients information
+			const recipients = emailData[emailData.length - 1]?.sender?.email ? 
+				[emailData[emailData.length - 1]?.sender?.email] : [];
+			
+			// Call the AI suggestion API
+			const response = await fetch('/api/ai/suggest', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					prompt: 'Suggest a brief, professional reply to this email thread.',
+					threadContext,
+					emailContent: messageContent,
+					recipients,
+				}),
+			});
+
+			
+			if (!response.ok) {
+				throw new Error('Failed to get AI suggestion');
+			}
+			
+			const data = await response.json();
+			
+			if (data.success && data.content) {
+				
+				// Find the editor element
+				const editorElement = document.querySelector('.ProseMirror');
+				if (editorElement instanceof HTMLElement) {
+					// Clean up the content - remove Subject line and fix spacing
+					let cleanedContent = data.content;
+					
+					// Log the raw content for debugging
+					console.log('Raw content from API:', JSON.stringify(cleanedContent));
+					
+					// Pre-process the content to fix common formatting issues
+					// Fix broken apostrophes that might cause line breaks
+					cleanedContent = cleanedContent.replace(/([A-Za-z])\s*'\s*([A-Za-z])/g, "$1'$2");
+					
+					// Remove any Subject line completely (including any variations)
+					cleanedContent = cleanedContent.replace(/^Subject:.*?\n/i, '');
+					
+					// We'll preserve the original formatting from the API exactly as it comes in
+					// Only remove the Subject line if present, otherwise keep everything intact
+					
+					// Special handling for signature lines (Best, Name or similar)
+					const signatureRegex = /(Best[,.]|Regards[,.]|Sincerely[,.]|Thanks[,.]|Thank you[,.]|Cheers[,.]|Best regards[,.])[\s\n]+(\w+)[\s\n]*$/i;
+					const hasSignature = signatureRegex.test(cleanedContent);
+					
+					// If there's a signature, save it for later
+					let signature = '';
+					if (hasSignature) {
+						signature = cleanedContent.match(signatureRegex)?.[0] || '';
+						signature = signature.trim();
+						cleanedContent = cleanedContent.replace(signatureRegex, '');
+					}
+					
+					// Clean up the main content
+					cleanedContent = cleanedContent.trim();
+					
+					// Format the content as a single paragraph with signature at the end
+					let formattedContent = '';
+					
+					// Start with an empty formatted content string
+					formattedContent = '';
+					
+					// Preserve the original content structure from the API
+					// No need to process the content line by line
+					
+					// Split by double newlines to get paragraphs, preserving the original structure
+					const paragraphs = cleanedContent.split(/\n\s*\n/).filter(p => p.trim() !== '');
+					
+					// Log the paragraphs for debugging
+					console.log('Paragraphs after splitting:', paragraphs);
+					
+					// Convert the content directly to HTML paragraphs with proper spacing
+					// First, split the content by single newlines to get all lines
+					const contentLines = cleanedContent.split(/\n/).filter((line: string) => line.trim() !== '');
+					
+					// Process the lines to create paragraphs with proper spacing
+					formattedContent = '';
+					
+					// Handle the greeting separately (first line)
+					if (contentLines.length > 0) {
+						// Add the greeting as its own paragraph
+						formattedContent += '<p>' + contentLines[0].trim() + '</p>';
+						
+						// Add an empty paragraph after the greeting for spacing
+						formattedContent += '<p><br></p>';
+						
+						// Process the remaining lines as paragraphs
+						for (let i = 1; i < contentLines.length; i++) {
+							// Add each line as a paragraph
+							formattedContent += '<p>' + contentLines[i].trim() + '</p>';
+							
+							// Add an empty paragraph between content paragraphs for spacing
+							if (i < contentLines.length - 1) {
+								formattedContent += '<p><br></p>';
+							}
+						}
+					}
+					
+					// Add signature with proper spacing according to Tiptap docs
+					if (signature) {
+						// Add an empty paragraph for spacing before the signature
+						formattedContent += '<p><br></p>';
+						
+						// Split the signature into lines
+						const signatureLines = signature.split(/\n/);
+						
+						// Add the signature closing (e.g., "Best,")
+						if (signatureLines.length > 0) {
+							formattedContent += '<p>' + signatureLines[0].trim() + '</p>';
+						}
+						
+						// Add the name on a separate line
+						if (signatureLines.length > 1) {
+							formattedContent += '<p>' + signatureLines[1].trim() + '</p>';
+						}
+					}
+					
+					// Set the final content
+					cleanedContent = formattedContent;
+					
+					// Log the final formatted content for debugging
+					console.log('Final formatted HTML content:', formattedContent);
+					
+					// Set the content in the editor using proper Tiptap HTML format
+					// This ensures the editor properly renders paragraphs with correct spacing
+					editorElement.innerHTML = formattedContent;
+					
+					// Focus the editor
+					editorElement.focus();
+					
+					// Show success message
+					toast.success('AI content applied');
+				} else {
+					console.error('Could not find editor element');
+					toast.error('Could not apply AI content');
+				}
+			} else {
+				console.error('AI suggestion error:', data.error || 'No error message provided');
+				throw new Error(data.error || 'Failed to generate suggestion');
+			}
+		} catch (error) {
+			console.error('Error getting AI suggestion:', error);
+			toast.error('Failed to generate AI suggestion');
+		} finally {
+			setIsLoadingSuggestion(false);
+		}
+	}, [emailData, messageContent, t]);
 
 	if (!composerIsOpen) {
 		return (
@@ -236,9 +417,10 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 		<div className="bg-offsetLight dark:bg-offsetDark w-full p-2">
 			<form
 				className={cn(
-					'border-border ring-offset-background flex h-[300px] flex-col space-y-2.5 rounded-[10px] border px-2 py-2 transition-shadow duration-300 ease-in-out',
+					`border-border ring-offset-background flex flex-col space-y-2.5 rounded-[10px] border px-2 py-2 transition-all duration-300 ease-in-out`,
 					isEditorFocused ? 'ring-2 ring-[#3D3D3D] ring-offset-1' : '',
 				)}
+				style={{ minHeight: '300px' }}
 				onDragOver={handleDragOver}
 				onDragLeave={handleDragLeave}
 				onDrop={handleDrop}
@@ -278,16 +460,31 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 					</Button>
 				</div>
 
-				<div className="w-full flex-grow overflow-hidden p-1">
+				<div className="w-full flex-grow p-1" style={{ maxHeight: `${Math.min(editorHeight - 100, 500)}px`, overflowY: 'auto' }}>
 					<div
-						className="h-full w-full overflow-y-auto"
+						className="w-full"
 						onDragOver={(e) => e.stopPropagation()}
 						onDragLeave={(e) => e.stopPropagation()}
 						onDrop={(e) => e.stopPropagation()}
 					>
+						{/* Render Editor with messageContent */}
+						{(() => { console.log('Rendering Editor with messageContent:', messageContent); return null; })()}
 						<Editor
 							onChange={(content) => {
 								setMessageContent(content);
+								
+								// Calculate editor height after content changes
+								setTimeout(() => {
+									const editorElement = document.querySelector('.ProseMirror');
+									if (editorElement) {
+										// Get content height + some padding
+										const contentHeight = editorElement.scrollHeight;
+										// Add extra space for header and footer (adjust as needed)
+										const totalHeight = contentHeight + 120;
+										// Update height state (minimum 300px)
+										setEditorHeight(Math.max(300, totalHeight));
+									}
+								}, 0);
 							}}
 							className="sm:max-w-[600px] md:max-w-[2050px]"
 							initialValue={{
@@ -307,93 +504,34 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 								console.log('Editor blurred');
 								setIsEditorFocused(false);
 							}}
+							aiSuggestion={aiSuggestion}
 						/>
 					</div>
 				</div>
 
-				<div className="mt-auto flex items-center justify-between">
+				<div className="flex items-center justify-between pt-2 sticky bottom-0 bg-transparent">
 					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
-							className="group relative w-9 overflow-hidden transition-all duration-200 hover:w-32"
-							onClick={(e) => {
-								e.preventDefault();
-								document.getElementById('attachment-input')?.click();
-							}}
+							size="sm"
+							className="group relative flex items-center gap-1 transition-all duration-200"
+							onClick={handleGetAISuggestion}
+							disabled={isLoadingSuggestion}
 						>
-							<Plus className="absolute left-[9px] h-6 w-6" />
-							<span className="whitespace-nowrap pl-7 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-								{t('common.replyCompose.attachments')}
+							<Sparkles className="h-4 w-4" />
+							<span className="whitespace-nowrap">
+								{isLoadingSuggestion ? 'Generating...' : 'AI Suggest'}
 							</span>
 						</Button>
-
-						{attachments.length > 0 && (
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button variant="outline" className="flex items-center gap-2">
-										<Paperclip className="h-4 w-4" />
-										<span>
-											{attachments.length}{' '}
-											{t('common.replyCompose.attachmentCount', { count: attachments.length })}
-										</span>
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-80 touch-auto" align="start">
-									<div className="space-y-2">
-										<div className="px-1">
-											<h4 className="font-medium leading-none">
-												{t('common.replyCompose.attachments')}
-											</h4>
-											<p className="text-muted-foreground text-sm">
-												{attachments.length}{' '}
-												{t('common.replyCompose.fileCount', { count: attachments.length })}
-											</p>
-										</div>
-										<Separator />
-										<div className="h-[300px] touch-auto overflow-y-auto overscroll-contain px-1 py-1">
-											<div className="grid grid-cols-2 gap-2">
-												{attachments.map((file, index) => (
-													<div
-														key={index}
-														className="group relative overflow-hidden rounded-md border"
-													>
-														<UploadedFileIcon
-															removeAttachment={removeAttachment}
-															index={index}
-															file={file}
-														/>
-														<div className="bg-muted/10 p-2">
-															<p className="text-xs font-medium">
-																{truncateFileName(file.name, 20)}
-															</p>
-															<p className="text-muted-foreground text-xs">
-																{(file.size / (1024 * 1024)).toFixed(2)} MB
-															</p>
-														</div>
-													</div>
-												))}
-											</div>
-										</div>
-									</div>
-								</PopoverContent>
-							</Popover>
-						)}
-						<input
-							type="file"
-							id="attachment-input"
-							className="hidden"
-							onChange={handleAttachment}
-							multiple
-							accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-						/>
 					</div>
+					
 					<div className="mr-2 flex items-center gap-2">
-						<Button variant="ghost" size="sm" className="h-8">
+						<Button variant="ghost" size="sm" className="h-8 border">
 							{t('common.replyCompose.saveDraft')}
 						</Button>
 						<Button
 							size="sm"
-							className="group relative h-8 w-9 overflow-hidden transition-all duration-200 hover:w-24"
+							className="group rounded-full relative h-9 w-9"
 							onClick={async (e) => {
 								e.preventDefault();
 								await handleSendEmail(e);
@@ -401,9 +539,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 							disabled={!isFormValid}
 							type="button"
 						>
-							<span className="whitespace-nowrap pr-7 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-								{t('common.replyCompose.send')}
-							</span>
+							
 							<ArrowUp className="absolute right-2.5 h-4 w-4" />
 						</Button>
 					</div>

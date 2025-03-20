@@ -5,7 +5,6 @@ import {
 	Italic,
 	Strikethrough,
 	Underline,
-	Code,
 	Link as LinkIcon,
 	List,
 	ListOrdered,
@@ -14,6 +13,7 @@ import {
 	Heading3,
 	Paperclip,
 	Plus,
+	X,
 } from 'lucide-react';
 import {
 	EditorCommand,
@@ -33,9 +33,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { AnyExtension, Editor as TiptapEditor, useCurrentEditor } from '@tiptap/react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { TextButtons } from '@/components/create/selectors/text-buttons';
+import { Editor as TiptapEditor, useCurrentEditor } from '@tiptap/react';
 import { suggestionItems } from '@/components/create/slash-command';
 import { defaultExtensions } from '@/components/create/extensions';
 import { ImageResizer, handleCommandNavigation } from 'novel';
@@ -43,9 +42,10 @@ import { uploadFn } from '@/components/create/image-upload';
 import { handleImageDrop, handleImagePaste } from 'novel';
 import EditorMenu from '@/components/create/editor-menu';
 import { UploadedFileIcon } from './uploaded-file-icon';
+import Placeholder from '@tiptap/extension-placeholder';
 import { Separator } from '@/components/ui/separator';
-import { cn, truncateFileName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { truncateFileName } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Markdown } from 'tiptap-markdown';
 import { useReducer, useRef } from 'react';
@@ -74,6 +74,7 @@ interface EditorProps {
 	className?: string;
 	onCommandEnter?: () => void;
 	onAttachmentsChange?: (attachments: File[]) => void;
+	aiSuggestion?: string; // Added prop for AI suggestion
 }
 
 interface EditorState {
@@ -379,6 +380,7 @@ export default function Editor({
 	className,
 	onCommandEnter,
 	onAttachmentsChange,
+	aiSuggestion,
 }: EditorProps) {
 	const [state, dispatch] = useReducer(editorReducer, {
 		openNode: false,
@@ -386,6 +388,9 @@ export default function Editor({
 		openLink: false,
 		openAI: false,
 	});
+
+	// State to track the current AI suggestion
+	const [currentSuggestion, setCurrentSuggestion] = useState<string>('');
 
 	// Add a ref to store the editor content to prevent losing it on refresh
 	const contentRef = useRef<string>('');
@@ -398,8 +403,8 @@ export default function Editor({
 
 	// Function to focus the editor
 	const focusEditor = (e: React.MouseEvent<HTMLDivElement>) => {
-		if (e.target === containerRef.current) {
-			editorRef.current?.commands.focus('end');
+		if (e.target === containerRef.current && editorRef.current && editorRef.current.commands) {
+			editorRef.current.commands.focus('end');
 		}
 	};
 
@@ -449,10 +454,6 @@ export default function Editor({
 			return {} as TiptapEditor;
 		}
 		// Otherwise return the editor with our additional methods
-		return {
-			...editorRef.current,
-			clearContent: clearEditorContent,
-		} as TiptapEditor;
 	}, [clearEditorContent]);
 
 	// Handle command+enter or ctrl+enter
@@ -468,17 +469,167 @@ export default function Editor({
 		}, 200);
 	}, [onCommandEnter, clearEditorContent]);
 
+	// Function to insert AI suggestion into the editor
+	const insertAiSuggestion = React.useCallback(() => {
+		console.log('insertAiSuggestion called with currentSuggestion:', currentSuggestion);
+		console.log('editorRef.current exists:', !!editorRef.current);
+
+		if (!currentSuggestion || !editorRef.current) {
+			console.log('Cannot insert suggestion: missing currentSuggestion or editorRef');
+			return;
+		}
+
+		try {
+			// Make sure commands are available
+			if (!editorRef.current.commands) {
+				console.error('Editor commands not available');
+				return;
+			}
+
+			// Focus the editor first to ensure the cursor is active
+			editorRef.current.commands.focus();
+
+			// Clear existing content if the editor is empty
+			const isEmpty = editorRef.current.isEmpty;
+			if (isEmpty) {
+				editorRef.current.commands.clearContent();
+			}
+
+			// Format the suggestion before inserting it
+			console.log('Formatting suggestion before insertion');
+
+			// Process the content to maintain proper paragraph structure and spacing
+			let formattedSuggestion = currentSuggestion;
+
+			// Fix broken apostrophes that might cause line breaks
+			formattedSuggestion = formattedSuggestion.replace(/([A-Za-z])\s*'\s*([A-Za-z])/g, "$1'$2");
+
+			// Split the content by paragraphs (double newlines)
+			const paragraphs = formattedSuggestion.split(/\n\s*\n/);
+
+			// Process each paragraph to ensure proper formatting
+			const processedParagraphs = paragraphs.map((paragraph) => {
+				// Normalize all whitespace within the paragraph
+				return paragraph.replace(/\s+/g, ' ').trim();
+			});
+
+			// Handle signature separately if it exists
+			let mainContent = processedParagraphs;
+			let signature = '';
+
+			// Check for signature pattern in the last two paragraphs
+			if (processedParagraphs.length >= 2) {
+				const lastParagraph = processedParagraphs[processedParagraphs.length - 1];
+				const secondLastParagraph = processedParagraphs[processedParagraphs.length - 2];
+
+				// Check if the last paragraph is a name and the second last contains a closing
+				if (
+					lastParagraph &&
+					secondLastParagraph &&
+					lastParagraph.length < 20 &&
+					/(Best|Regards|Sincerely|Thanks|Thank you|Cheers|Best regards)[,.]?/.test(
+						secondLastParagraph,
+					)
+				) {
+					// This is likely a signature
+					signature = `${secondLastParagraph}\n${lastParagraph}`;
+					mainContent = processedParagraphs.slice(0, -2);
+				}
+			}
+
+			// Ensure signature is a string (not undefined)
+			signature = signature || '';
+
+			// Check for greeting in the first paragraph
+			let greeting = '';
+			let mainContentStart = 0;
+
+			// Look for greeting pattern in the first paragraph
+			const greetingRegex = /^(Hi|Hello|Hey|Dear)\s+[\w\s,]+[,.]?/i;
+			if (mainContent.length > 0 && mainContent[0] && greetingRegex.test(mainContent[0])) {
+				// Safely assign greeting with type checking
+				const firstParagraph = mainContent[0];
+				greeting = firstParagraph;
+				mainContentStart = 1; // Skip the greeting when processing main content
+			}
+
+			// Create proper HTML content for Tiptap
+			let htmlContent = '';
+
+			// Add greeting if found, as its own paragraph
+			if (greeting) {
+				// Make sure greeting ends with a comma if it doesn't already
+				if (!greeting.endsWith(',') && !greeting.endsWith('.')) {
+					greeting += ',';
+				}
+				htmlContent += `<p>${greeting}</p>`;
+			}
+
+			// Add main content paragraphs (skipping greeting if it was found)
+			mainContent.slice(mainContentStart).forEach((paragraph) => {
+				htmlContent += `<p>${paragraph}</p>`;
+			});
+
+			// Add signature if found
+			if (signature) {
+				// Safely split the signature string
+				const signatureLines = signature.split(/\n/);
+
+				// Add each line of the signature as a separate paragraph
+				signatureLines.forEach((line) => {
+					// Make sure line is not undefined
+					if (line) {
+						htmlContent += `<p>${line}</p>`;
+					}
+				});
+			}
+
+			console.log('HTML content for Tiptap:', htmlContent);
+
+			// Insert the HTML content into the editor
+			editorRef.current.commands.insertContent(htmlContent, {
+				parseOptions: {
+					preserveWhitespace: 'full',
+				},
+			});
+			console.log('Successfully inserted formatted suggestion');
+
+			// Update the content reference and notify parent
+			const html = editorRef.current.getHTML();
+			contentRef.current = html;
+			onChange(html);
+
+			// Clear the current suggestion after inserting
+			setCurrentSuggestion('');
+		} catch (error) {
+			console.error('Error inserting AI suggestion:', error);
+		}
+	}, [currentSuggestion, onChange]);
+
+	// Update currentSuggestion when aiSuggestion prop changes
+	React.useEffect(() => {
+		console.log('aiSuggestion prop changed:', aiSuggestion);
+		console.log('Current currentSuggestion state:', currentSuggestion);
+
+		// Always update currentSuggestion when aiSuggestion changes, even if it's empty
+		console.log('Setting currentSuggestion to:', aiSuggestion);
+		setCurrentSuggestion(aiSuggestion || ''); // Ensure we handle null/undefined cases
+	}, [aiSuggestion]);
+
+	// Monitor currentSuggestion state changes
+	React.useEffect(() => {
+		console.log('currentSuggestion state updated:', currentSuggestion);
+	}, [currentSuggestion]);
+
 	return (
 		<div
 			className={`relative w-full max-w-[450px] sm:max-w-[600px] ${className || ''}`}
 			onClick={focusEditor}
 			onKeyDown={(e) => {
-				// Prevent form submission on Enter key
 				if (e.key === 'Enter' && !e.shiftKey) {
 					e.stopPropagation();
 				}
 
-				// Handle Command+Enter (Mac) or Ctrl+Enter (Windows/Linux)
 				if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
 					e.preventDefault();
 					e.stopPropagation();
@@ -489,19 +640,27 @@ export default function Editor({
 			<EditorRoot>
 				<EditorContent
 					immediatelyRender={false}
-					initialContent={initialValue || defaultEditorContent}
+					initialContent={defaultEditorContent}
 					extensions={extensions}
 					ref={containerRef}
-					className="min-h-96 cursor-text"
+					className="cursor-text"
 					editorProps={{
 						handleDOMEvents: {
 							keydown: (view, event) => {
-								// Handle Command+Enter (Mac) or Ctrl+Enter (Windows/Linux)
 								if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
 									event.preventDefault();
 									handleCommandEnter();
 									return true;
 								}
+
+								if (event.key === 'Tab') {
+									if (currentSuggestion) {
+										event.preventDefault();
+										insertAiSuggestion();
+										return true;
+									}
+								}
+
 								return handleCommandNavigation(event);
 							},
 							focus: () => {
@@ -518,7 +677,7 @@ export default function Editor({
 							handleImageDrop(view, event, moved, uploadFn),
 						attributes: {
 							class:
-								'prose dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-full',
+								'prose dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-full prose-p:my-5',
 							'data-placeholder': placeholder,
 						},
 					}}
@@ -571,6 +730,35 @@ export default function Editor({
 							))}
 						</EditorCommandList>
 					</EditorCommand>
+
+					{currentSuggestion && currentSuggestion.length > 0 ? (
+						<div className="bg-muted/30 text-muted-foreground absolute bottom-0 left-0 right-0 z-50 border-t p-2 text-sm backdrop-blur-sm">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-1 text-xs">
+									<span className="bg-primary/10 text-primary rounded px-1 py-0.5 text-[10px] font-medium">
+										AI Suggestion
+									</span>
+									<span>
+										Press{' '}
+										<kbd className="bg-background rounded border px-1 py-0.5 text-[10px]">Tab</kbd>{' '}
+										to accept
+									</span>
+								</div>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-6 w-6 p-0"
+									onClick={() => {
+										console.log('Clearing suggestion');
+										setCurrentSuggestion('');
+									}}
+								>
+									<X className="h-3 w-3" />
+								</Button>
+							</div>
+							<div className="mt-1 max-h-32 overflow-auto text-xs italic">{currentSuggestion}</div>
+						</div>
+					) : null}
 
 					{/* Replace the default editor menu with just our TextButtons */}
 					<EditorMenu

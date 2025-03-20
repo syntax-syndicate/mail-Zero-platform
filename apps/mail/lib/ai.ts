@@ -151,3 +151,63 @@ function checkIfQuestion(prompt: string): boolean {
   
   return questionStarters.some(starter => trimmedPrompt.startsWith(starter));
 } 
+
+/**
+ * Formats the email thread context for AI processing
+ * @param emailData Array of email messages in the thread
+ * @returns Formatted thread context as a string
+ */
+export function formatThreadContext(emailData: any[]): string {
+  if (!emailData || emailData.length === 0) {
+    return '';
+  }
+
+  const subject = emailData[0]?.subject || 'No Subject';
+  let threadSummary = `This is part of an email thread with subject: "${subject}"`;
+  
+  // Include all messages in the thread for better context
+  threadSummary += "\nPrevious messages in this thread (from oldest to newest):";
+  
+  // Sort messages chronologically (oldest first)
+  const sortedMessages = [...emailData].sort((a, b) => {
+    const dateA = new Date(a.receivedOn || 0).getTime();
+    const dateB = new Date(b.receivedOn || 0).getTime();
+    return dateA - dateB;
+  });
+
+  sortedMessages.forEach((msg, index) => {
+    const sender = msg.sender?.name || msg.sender?.email || 'Unknown';
+    const date = new Date(msg.receivedOn || '').toLocaleDateString();
+    const content = msg.decodedBody || msg.body || '';
+    
+    // Clean HTML and format content
+    const simplifiedContent = content
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/\s+/g, ' ')    // Normalize whitespace
+      .trim()
+      .substring(0, 800);     // Limit length but include more context
+    
+    threadSummary += `\n[Message ${index + 1}] From: ${sender} (${date}):\n${simplifiedContent}${simplifiedContent.length >= 800 ? '...' : ''}`;
+    
+    // Add recipient information if available
+    if (msg.to && msg.to.length > 0) {
+      const recipients = msg.to.map((recipient: any) => 
+        recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email
+      ).join(', ');
+      threadSummary += `\nRecipients: ${recipients}`;
+    }
+  });
+
+  // Clean up the thread summary similar to formatEmailContent
+  threadSummary = threadSummary.trimStart()
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n').map(line => line.trimRight()).join('\n')
+    .trim();
+threadSummary = threadSummary.trimStart()
+  .replace(/\r\n/g, '\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .split('\n').map(line => line.trimRight()).join('\n')
+  .trim();
+  return threadSummary;
+}
