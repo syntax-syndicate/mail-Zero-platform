@@ -148,7 +148,7 @@ export function DemoMailLayout() {
 							</DrawerHeader>
 							<div className="flex h-full flex-col overflow-hidden">
 								<div className="flex-1 overflow-hidden">
-									<ThreadDisplay mail={mail.selected} onClose={handleClose} isMobile={true} />
+									<ThreadDisplay onClose={handleClose} isMobile={true} />
 								</div>
 							</div>
 						</DrawerContent>
@@ -197,18 +197,24 @@ export function MailLayout() {
 		return () => window.removeEventListener('resize', checkIsMobile);
 	}, []);
 
+	const searchParams = useSearchParams();
+	const threadIdParam = searchParams.get('threadId');
+
 	useEffect(() => {
-		if (mail.selected) {
+		if (threadIdParam) {
 			setOpen(true);
 		} else {
 			setOpen(false);
 		}
-	}, [mail.selected]);
+	}, [threadIdParam]);
 
 	const handleClose = useCallback(() => {
 		setOpen(false);
-		setMail((mail) => ({ ...mail, selected: null }));
-	}, [setMail]);
+		// Update URL to remove threadId parameter
+		const currentParams = new URLSearchParams(searchParams.toString());
+		currentParams.delete('threadId');
+		router.push(`/mail/${folder}?${currentParams.toString()}`);
+	}, [router, folder, searchParams]);
 
 	useHotKey('/', () => {
 		setSearchMode(true);
@@ -234,7 +240,7 @@ export function MailLayout() {
 					<ResizablePanel
 						className={cn(
 							'border-none !bg-transparent',
-							mail?.selected ? 'md:hidden lg:block' : '',
+							threadIdParam ? 'md:hidden lg:block' : '',
 						)}
 						defaultSize={isMobile ? 100 : 25}
 						minSize={isMobile ? 100 : 25}
@@ -292,7 +298,7 @@ export function MailLayout() {
 										) : (
 											<>
 												<div className="flex-1 text-center text-sm font-medium capitalize">
-													<MailCategoryTabs iconsOnly={!!mail.selected} />
+													<MailCategoryTabs iconsOnly={!!threadIdParam} />
 												</div>
 												<div className="flex items-center gap-1.5">
 													<Button
@@ -337,7 +343,7 @@ export function MailLayout() {
 						</div>
 					</ResizablePanel>
 
-					{isDesktop && mail.selected && (
+					{isDesktop && threadIdParam && (
 						<>
 							<ResizablePanel
 								className="bg-offsetLight dark:bg-offsetDark shadow-sm md:flex md:rounded-2xl md:border md:shadow-sm"
@@ -345,7 +351,7 @@ export function MailLayout() {
 								minSize={25}
 							>
 								<div className="relative hidden h-[calc(100vh-(12px+14px))] flex-1 md:block">
-									<ThreadDisplay mail={mail.selected} onClose={handleClose} />
+									<ThreadDisplay onClose={handleClose} />
 								</div>
 							</ResizablePanel>
 						</>
@@ -361,7 +367,7 @@ export function MailLayout() {
 							</DrawerHeader>
 							<div className="flex h-full flex-col overflow-hidden">
 								<div className="flex-1 overflow-hidden">
-									<ThreadDisplay mail={mail.selected} onClose={handleClose} isMobile={true} />
+									<ThreadDisplay onClose={handleClose} isMobile={true} />
 								</div>
 							</div>
 						</DrawerContent>
