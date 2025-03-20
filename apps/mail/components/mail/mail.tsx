@@ -35,11 +35,20 @@ export function DemoMailLayout() {
 	const isValidating = false;
 	const isLoading = false;
 	const isDesktop = true;
+	const searchParams = useSearchParams();
+	const threadIdParam = searchParams?.get('threadId');
 
 	const [open, setOpen] = useState(false);
 	const handleClose = () => setOpen(false);
 	const [activeCategory, setActiveCategory] = useState('Primary');
 	const [filteredItems, setFilteredItems] = useState(items);
+	
+	// Ensure thread display is open when threadId is in URL parameters
+	useEffect(() => {
+		if (threadIdParam) {
+			setOpen(true);
+		}
+	}, [threadIdParam]);
 
 	useEffect(() => {
 		if (activeCategory === 'Primary') {
