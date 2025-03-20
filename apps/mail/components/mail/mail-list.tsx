@@ -5,6 +5,7 @@ import { AlertTriangle, Bell, Briefcase, StickyNote, Tag, User, Users } from 'lu
 import { type ComponentProps, memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmptyState, type FolderType } from '@/components/mail/empty-state';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { preloadThread, useThreads } from '@/hooks/use-threads';
 import { cn, defaultPageSize, formatDate } from '@/lib/utils';
 import { useHotKey, useKeyState } from '@/hooks/use-hot-key';
@@ -15,7 +16,6 @@ import { useMail } from '@/components/mail/use-mail';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import { useSession } from '@/lib/auth-client';
 import { Badge } from '@/components/ui/badge';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Virtuoso } from 'react-virtuoso';
 import items from './demo.json';
@@ -383,14 +383,14 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 			}
 
 			const threadId = message.threadId ?? message.id;
-			
+
 			if (mail.selected === threadId) {
 				// Deselect the thread and update URL to remove threadId
 				setMail({
 					selected: null,
 					bulkSelected: [],
 				});
-				
+
 				// Update URL to remove threadId
 				const currentParams = new URLSearchParams(searchParams.toString());
 				currentParams.delete('threadId');
@@ -402,13 +402,13 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 					selected: threadId,
 					bulkSelected: [],
 				});
-				
+
 				// Update URL with threadId
 				const currentParams = new URLSearchParams(searchParams.toString());
 				currentParams.set('threadId', threadId);
 				router.push(`/mail/${folder}?${currentParams.toString()}`);
 			}
-			
+
 			if (message.unread) {
 				return markAsRead({ ids: [message.id] })
 					.then(() => mutate())
