@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import OpenAI from 'openai';
-import { formatThreadContext } from '@/lib/ai';
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
