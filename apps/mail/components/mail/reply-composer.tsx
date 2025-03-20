@@ -1,15 +1,22 @@
-import { type Dispatch, type SetStateAction, useRef, useState, useEffect, useCallback } from 'react';
-import { type JSONContent } from 'novel';
+import {
+	type Dispatch,
+	type SetStateAction,
+	useRef,
+	useState,
+	useEffect,
+	useCallback,
+} from 'react';
 import { ArrowUp, Paperclip, Reply, X, Plus, Sparkles } from 'lucide-react';
 import { cleanEmailAddress, truncateFileName } from '@/lib/utils';
 import Editor from '@/components/create/editor';
 import { Button } from '@/components/ui/button';
+import { formatThreadContext } from '@/lib/ai';
 import type { ParsedMessage } from '@/types';
 import { useTranslations } from 'next-intl';
 import { sendEmail } from '@/actions/send';
+import { type JSONContent } from 'novel';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { formatThreadContext } from '@/lib/ai';
 
 interface ReplyComposeProps {
 	emailData: ParsedMessage[];
@@ -40,7 +47,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 			setIsComposerOpen(value);
 		}
 	};
-	
+
 	// Reset editor height when composer is opened
 	useEffect(() => {
 		if (composerIsOpen) {
@@ -115,7 +122,8 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 		quotedMessage?: string,
 	) => {
 		// Convert JSONContent to string if needed
-		const messageStr = typeof formattedMessage === 'string' ? formattedMessage : JSON.stringify(formattedMessage);
+		const messageStr =
+			typeof formattedMessage === 'string' ? formattedMessage : JSON.stringify(formattedMessage);
 		return `
       <div style="font-family: Arial, sans-serif;">
         <div style="margin-bottom: 20px;">
@@ -225,7 +233,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 
 	// Check if form is valid for submission
 	const isFormValid = !isMessageEmpty || attachments.length > 0;
-	
+
 	// Track aiSuggestion changes
 	useEffect(() => {
 		console.log('aiSuggestion state changed:', aiSuggestion);
@@ -234,18 +242,19 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 	// Function to get AI suggestion
 	const handleGetAISuggestion = useCallback(async () => {
 		if (isLoadingSuggestion) return;
-		
+
 		setIsLoadingSuggestion(true);
 		setAiSuggestion('');
-		
+
 		try {
 			// Format the thread context for better AI understanding
 			const threadContext = formatThreadContext(emailData);
-			
+
 			// Prepare recipients information
-			const recipients = emailData[emailData.length - 1]?.sender?.email ? 
-				[emailData[emailData.length - 1]?.sender?.email] : [];
-			
+			const recipients = emailData[emailData.length - 1]?.sender?.email
+				? [emailData[emailData.length - 1]?.sender?.email]
+				: [];
+
 			// Call the AI suggestion API
 			const response = await fetch('/api/ai/suggest', {
 				method: 'POST',
@@ -260,38 +269,37 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 				}),
 			});
 
-			
 			if (!response.ok) {
 				throw new Error('Failed to get AI suggestion');
 			}
-			
+
 			const data = await response.json();
-			
+
 			if (data.success && data.content) {
-				
 				// Find the editor element
 				const editorElement = document.querySelector('.ProseMirror');
 				if (editorElement instanceof HTMLElement) {
 					// Clean up the content - remove Subject line and fix spacing
 					let cleanedContent = data.content;
-					
+
 					// Log the raw content for debugging
 					console.log('Raw content from API:', JSON.stringify(cleanedContent));
-					
+
 					// Pre-process the content to fix common formatting issues
 					// Fix broken apostrophes that might cause line breaks
 					cleanedContent = cleanedContent.replace(/([A-Za-z])\s*'\s*([A-Za-z])/g, "$1'$2");
-					
+
 					// Remove any Subject line completely (including any variations)
 					cleanedContent = cleanedContent.replace(/^Subject:.*?\n/i, '');
-					
+
 					// We'll preserve the original formatting from the API exactly as it comes in
 					// Only remove the Subject line if present, otherwise keep everything intact
-					
+
 					// Special handling for signature lines (Best, Name or similar)
-					const signatureRegex = /(Best[,.]|Regards[,.]|Sincerely[,.]|Thanks[,.]|Thank you[,.]|Cheers[,.]|Best regards[,.])[\s\n]+(\w+)[\s\n]*$/i;
+					const signatureRegex =
+						/(Best[,.]|Regards[,.]|Sincerely[,.]|Thanks[,.]|Thank you[,.]|Cheers[,.]|Best regards[,.])[\s\n]+(\w+)[\s\n]*$/i;
 					const hasSignature = signatureRegex.test(cleanedContent);
-					
+
 					// If there's a signature, save it for later
 					let signature = '';
 					if (hasSignature) {
@@ -299,84 +307,86 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 						signature = signature.trim();
 						cleanedContent = cleanedContent.replace(signatureRegex, '');
 					}
-					
+
 					// Clean up the main content
 					cleanedContent = cleanedContent.trim();
-					
+
 					// Format the content as a single paragraph with signature at the end
 					let formattedContent = '';
-					
+
 					// Start with an empty formatted content string
 					formattedContent = '';
-					
+
 					// Preserve the original content structure from the API
 					// No need to process the content line by line
-					
+
 					// Split by double newlines to get paragraphs, preserving the original structure
-					const paragraphs = cleanedContent.split(/\n\s*\n/).filter(p => p.trim() !== '');
-					
+					const paragraphs = cleanedContent.split(/\n\s*\n/).filter((p) => p.trim() !== '');
+
 					// Log the paragraphs for debugging
 					console.log('Paragraphs after splitting:', paragraphs);
-					
+
 					// Convert the content directly to HTML paragraphs with proper spacing
 					// First, split the content by single newlines to get all lines
-					const contentLines = cleanedContent.split(/\n/).filter((line: string) => line.trim() !== '');
-					
+					const contentLines = cleanedContent
+						.split(/\n/)
+						.filter((line: string) => line.trim() !== '');
+
 					// Process the lines to create paragraphs with proper spacing
 					formattedContent = '';
-					
+
 					// Handle the greeting separately (first line)
 					if (contentLines.length > 0) {
 						// Add the greeting as its own paragraph
 						formattedContent += '<p>' + contentLines[0].trim() + '</p>';
-						
+
 						// Add an empty paragraph after the greeting for spacing
 						formattedContent += '<p><br></p>';
-						
+
 						// Process the remaining lines as paragraphs
 						for (let i = 1; i < contentLines.length; i++) {
 							// Add each line as a paragraph
 							formattedContent += '<p>' + contentLines[i].trim() + '</p>';
-							
+
 							// Add an empty paragraph between content paragraphs for spacing
 							if (i < contentLines.length - 1) {
 								formattedContent += '<p><br></p>';
 							}
 						}
 					}
-					
+
 					// Add signature with proper spacing according to Tiptap docs
 					if (signature) {
 						// Add an empty paragraph for spacing before the signature
 						formattedContent += '<p><br></p>';
-						
+
 						// Split the signature into lines
 						const signatureLines = signature.split(/\n/);
-						
+
 						// Add the signature closing (e.g., "Best,")
 						if (signatureLines.length > 0) {
 							formattedContent += '<p>' + signatureLines[0].trim() + '</p>';
 						}
-						
+
 						// Add the name on a separate line
 						if (signatureLines.length > 1) {
 							formattedContent += '<p>' + signatureLines[1].trim() + '</p>';
 						}
 					}
-					
+
 					// Set the final content
 					cleanedContent = formattedContent;
-					
+
 					// Log the final formatted content for debugging
 					console.log('Final formatted HTML content:', formattedContent);
-					
+
 					// Set the content in the editor using proper Tiptap HTML format
 					// This ensures the editor properly renders paragraphs with correct spacing
 					editorElement.innerHTML = formattedContent;
-					
+
 					// Focus the editor
 					editorElement.focus();
-					
+
 					// Show success message
 					toast.success('AI content applied');
 				} else {
@@ -460,7 +470,10 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 					</Button>
 				</div>
 
-				<div className="w-full flex-grow p-1" style={{ maxHeight: `${Math.min(editorHeight - 100, 500)}px`, overflowY: 'auto' }}>
+				<div
+					className="w-full flex-grow p-1"
+					style={{ maxHeight: `${Math.min(editorHeight - 100, 500)}px`, overflowY: 'auto' }}
+				>
 					<div
 						className="w-full"
 						onDragOver={(e) => e.stopPropagation()}
@@ -468,11 +481,14 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 						onDrop={(e) => e.stopPropagation()}
 					>
 						{/* Render Editor with messageContent */}
-						{(() => { console.log('Rendering Editor with messageContent:', messageContent); return null; })()}
+						{(() => {
+							console.log('Rendering Editor with messageContent:', messageContent);
+							return null;
+						})()}
 						<Editor
 							onChange={(content) => {
 								setMessageContent(content);
-								
+
 								// Calculate editor height after content changes
 								setTimeout(() => {
 									const editorElement = document.querySelector('.ProseMirror');
@@ -509,7 +525,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 					</div>
 				</div>
 
-				<div className="flex items-center justify-between pt-2 sticky bottom-0 bg-transparent">
+				<div className="sticky bottom-0 flex items-center justify-between bg-transparent pt-2">
 					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
@@ -524,14 +540,14 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 							</span>
 						</Button>
 					</div>
-					
+
 					<div className="mr-2 flex items-center gap-2">
 						<Button variant="ghost" size="sm" className="h-8 border">
 							{t('common.replyCompose.saveDraft')}
 						</Button>
 						<Button
 							size="sm"
-							className="group rounded-full relative h-9 w-9"
+							className="group relative h-9 w-9 rounded-full"
 							onClick={async (e) => {
 								e.preventDefault();
 								await handleSendEmail(e);
@@ -539,7 +555,6 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 							disabled={!isFormValid}
 							type="button"
 						>
-							
 							<ArrowUp className="absolute right-2.5 h-4 w-4" />
 						</Button>
 					</div>
