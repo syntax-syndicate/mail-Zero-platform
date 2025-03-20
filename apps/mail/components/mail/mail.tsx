@@ -238,10 +238,7 @@ export function MailLayout() {
 					className="rounded-inherit gap-1.5 overflow-hidden"
 				>
 					<ResizablePanel
-						className={cn(
-							'border-none !bg-transparent',
-							threadIdParam ? 'md:hidden lg:block' : '',
-						)}
+						className={cn('border-none !bg-transparent', threadIdParam ? 'md:hidden lg:block' : '')}
 						defaultSize={isMobile ? 100 : 25}
 						minSize={isMobile ? 100 : 25}
 					>

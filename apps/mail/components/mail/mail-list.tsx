@@ -388,25 +388,25 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 
 			const threadId = message.threadId ?? message.id;
 			const currentParams = new URLSearchParams(searchParams.toString());
-			
+
 			if (threadIdParam === threadId) {
 				// Deselect the thread and update URL to remove threadId
 				currentParams.delete('threadId');
-				setMail(prev => ({
+				setMail((prev) => ({
 					...prev,
 					bulkSelected: [],
 				}));
-				
+
 				// Update URL to remove threadId
 				router.push(`/mail/${folder}?${currentParams.toString()}`);
 			} else {
 				// Select the thread and update URL with threadId
 				currentParams.set('threadId', threadId);
-				setMail(prev => ({
+				setMail((prev) => ({
 					...prev,
 					bulkSelected: [],
 				}));
-				
+
 				// Update URL with threadId
 				router.push(`/mail/${folder}?${currentParams.toString()}`);
 			}
