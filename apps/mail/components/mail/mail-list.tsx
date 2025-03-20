@@ -15,7 +15,7 @@ import { useMail } from '@/components/mail/use-mail';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import { useSession } from '@/lib/auth-client';
 import { Badge } from '@/components/ui/badge';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Virtuoso } from 'react-virtuoso';
 import items from './demo.json';
@@ -204,6 +204,8 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 	const [mail, setMail] = useMail();
 	const { data: session } = useSession();
 	const t = useTranslations();
+	const router = useRouter();
+	const searchParams = useSearchParams();
 
 	const sessionData = useMemo(
 		() => ({
@@ -380,25 +382,40 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 				return;
 			}
 
-			if (mail.selected === message.threadId || mail.selected === message.id) {
+			const threadId = message.threadId ?? message.id;
+			
+			if (mail.selected === threadId) {
+				// Deselect the thread and update URL to remove threadId
 				setMail({
 					selected: null,
 					bulkSelected: [],
 				});
+				
+				// Update URL to remove threadId
+				const currentParams = new URLSearchParams(searchParams.toString());
+				currentParams.delete('threadId');
+				router.push(`/mail/${folder}?${currentParams.toString()}`);
 			} else {
+				// Select the thread and update URL with threadId
 				setMail({
 					...mail,
-					selected: message.threadId ?? message.id,
+					selected: threadId,
 					bulkSelected: [],
 				});
+				
+				// Update URL with threadId
+				const currentParams = new URLSearchParams(searchParams.toString());
+				currentParams.set('threadId', threadId);
+				router.push(`/mail/${folder}?${currentParams.toString()}`);
 			}
+			
 			if (message.unread) {
 				return markAsRead({ ids: [message.id] })
 					.then(() => mutate())
 					.catch(console.error);
 			}
 		},
-		[mail, setMail, items, getSelectMode],
+		[mail, setMail, items, getSelectMode, router, searchParams, folder],
 	);
 
 	const isEmpty = items.length === 0;
