@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { connection, user as _user, account, userSettings } from "@zero/db/schema";
+import { connection, user as _user, account, userSettings, earlyAccess } from "@zero/db/schema";
 import { defaultUserSettings } from "@zero/db/user_settings_default";
 import { createAuthMiddleware, customSession } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -67,6 +67,18 @@ const options = {
   },
   plugins: [
     customSession(async ({ user, session }) => {
+      // First, check if user has early access
+      const [earlyAccessUser] = await db
+        .select()
+        .from(earlyAccess)
+        .where(eq(earlyAccess.email, user.email))
+        .limit(1);
+
+      // If user is not in early access list or doesn't have early access enabled
+      if (!earlyAccessUser?.isEarlyAccess) {
+        throw new Error("Early access required. Please join the waitlist.");
+      }
+
       const [foundUser] = await db
         .select({
           activeConnectionId: _user.defaultConnectionId,
