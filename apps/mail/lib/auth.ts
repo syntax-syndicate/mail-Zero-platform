@@ -67,25 +67,21 @@ const options = {
   },
   plugins: [
     customSession(async ({ user, session }) => {
-      // First, check if user has early access
-      const [earlyAccessUser] = await db
-        .select()
-        .from(earlyAccess)
-        .where(eq(earlyAccess.email, user.email))
-        .limit(1);
-
-      // If user is not in early access list or doesn't have early access enabled
-      if (!earlyAccessUser?.isEarlyAccess) {
-        throw new Error("Early access required. Please join the waitlist.");
-      }
-
+      // Combine early access check with user lookup in a single query
       const [foundUser] = await db
         .select({
           activeConnectionId: _user.defaultConnectionId,
+          hasEarlyAccess: earlyAccess.isEarlyAccess,
         })
         .from(_user)
+        .leftJoin(earlyAccess, eq(_user.email, earlyAccess.email))
         .where(eq(_user.id, user.id))
         .limit(1);
+
+      // Check early access and proceed
+      if (!foundUser?.hasEarlyAccess) {
+        throw new Error("Early access required. Please join the waitlist.");
+      }
 
       let activeConnection = null;
       
