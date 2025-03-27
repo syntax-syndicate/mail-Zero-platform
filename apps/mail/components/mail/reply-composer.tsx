@@ -1,7 +1,9 @@
+'use client';
+
 import { type Dispatch, type SetStateAction, useRef, useState, useEffect, useCallback } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { UploadedFileIcon } from '@/components/create/uploaded-file-icon';
-import { ArrowUp, Paperclip, Reply, X, Plus } from 'lucide-react';
+import { ArrowUp, Paperclip, Reply, X, Plus, Sparkles, Check, X as XIcon } from 'lucide-react';
 import { cleanEmailAddress, truncateFileName } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Editor from '@/components/create/editor';
@@ -11,6 +13,7 @@ import { useTranslations } from 'next-intl';
 import { sendEmail } from '@/actions/send';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import type { JSONContent } from 'novel';
 
 interface ReplyComposeProps {
   emailData: ParsedMessage[];
@@ -28,6 +31,11 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
   const [isEditorFocused, setIsEditorFocused] = useState(false);
   const [editorHeight, setEditorHeight] = useState(150); // Initial height 150px
   const [isResizing, setIsResizing] = useState(false);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [showAIOptions, setShowAIOptions] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
+  const [editorInitialValue, setEditorInitialValue] = useState<JSONContent | undefined>(undefined);
   const resizeStartY = useRef(0);
   const startHeight = useRef(0);
   const composerRef = useRef<HTMLFormElement>(null);
@@ -279,6 +287,69 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
   // Check if form is valid for submission
   const isFormValid = !isMessageEmpty || attachments.length > 0;
 
+  const createAIJsonContent = (text: string): JSONContent => {
+    const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    
+    if (paragraphs.length === 0) {
+      paragraphs.push(text);
+    }
+    
+    return {
+      type: "doc",
+      content: paragraphs.map(paragraph => ({
+        type: "paragraph",
+        content: [{ type: "text", text: paragraph }]
+      }))
+    };
+  };
+
+  const generateAIResponse = (): Promise<string> => {
+    // TODO: Implement AI response here
+    return Promise.resolve("Impelemted here!");
+  };
+
+  const handleAIButtonClick = async () => {
+    setIsLoadingAI(true);
+    try {
+      const suggestion = await generateAIResponse();
+      setAiSuggestion(suggestion);
+
+      setEditorInitialValue(createAIJsonContent(suggestion));
+
+      setEditorKey(prevKey => prevKey + 1);
+      setShowAIOptions(true);
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      toast.error('Failed to generate AI response');
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
+  const acceptAISuggestion = () => {
+    if (aiSuggestion) {
+      const paragraphs = aiSuggestion.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      const htmlContent = paragraphs.length > 0 
+        ? paragraphs.map(p => `<p>${p}</p>`).join('') 
+        : `<p>${aiSuggestion}</p>`;
+      
+      setEditorInitialValue(undefined);
+      setMessageContent(htmlContent);
+      resetAIState();
+    }
+  };
+
+  const rejectAISuggestion = () => {
+    setEditorInitialValue(undefined);
+    setEditorKey(prevKey => prevKey + 1);
+    resetAIState();
+  };
+
+  const resetAIState = () => {
+    setAiSuggestion(null);
+    setShowAIOptions(false);
+  };
+
   if (!composerIsOpen) {
     return (
       <div className="bg-offsetLight dark:bg-offsetDark w-full p-2">
@@ -372,16 +443,20 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
             onDrop={(e) => e.stopPropagation()}
           >
             <Editor
+              key={editorKey}
               onChange={(content) => {
                 setMessageContent(content);
               }}
-              className="sm:max-w-[600px] md:max-w-[2050px]"
+              initialValue={editorInitialValue}
+              className={cn(
+                "sm:max-w-[600px] md:max-w-[2050px]",
+                aiSuggestion ? "text-muted-foreground" : ""
+              )}
               placeholder="Type your reply here..."
               onFocus={() => {
                 setIsEditorFocused(true);
               }}
               onBlur={() => {
-                console.log('Editor blurred');
                 setIsEditorFocused(false);
               }}
             />
@@ -404,6 +479,52 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
                 {t('common.replyCompose.attachments')}
               </span>
             </Button>
+            
+            {!showAIOptions ? (
+              <Button 
+                variant="outline" 
+                className="group relative w-9 overflow-hidden transition-all duration-200 hover:w-32"
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleAIButtonClick();
+                }}
+                disabled={isLoadingAI}
+              >
+                {isLoadingAI ? (
+                  <div className="absolute left-[9px] h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                ) : (
+                  <Sparkles className="absolute left-[9px] h-6 w-6" />
+                )}
+                <span className="whitespace-nowrap pl-7 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  {isLoadingAI ? "Loading..." : "Generate"}
+                </span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    acceptAISuggestion();
+                  }}
+                >
+                  <Check className="h-5 w-5 text-green-500" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    rejectAISuggestion();
+                  }}
+                >
+                  <XIcon className="h-5 w-5 text-red-500" />
+                </Button>
+              </div>
+            )}
 
             {attachments.length > 0 && (
               <Popover>
