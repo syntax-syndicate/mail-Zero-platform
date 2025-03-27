@@ -524,18 +524,6 @@ ${email.decodedBody || 'No content'}
           </Button>
         </div>
 
-        <div 
-          className="w-full h-2 cursor-ns-resize flex justify-center items-center transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            setIsResizing(true);
-            resizeStartY.current = e.clientY;
-            startHeight.current = editorHeight;
-          }}
-        >
-          <div className="w-10 h-1 rounded-full dark:bg-white bg-black" />
-        </div>
-        
         {showAIOptions && (
           <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 dark:bg-blue-950 rounded-md text-xs">
             <Sparkles className="h-3.5 w-3.5 text-blue-500" />
@@ -543,13 +531,8 @@ ${email.decodedBody || 'No content'}
           </div>
         )}
 
-        <div 
-          className="w-full flex-grow overflow-hidden p-1"
-          style={{ 
-            height: `${editorHeight}px`,
-            maxHeight: '500px',
-            transition: isResizing ? 'none' : 'height 0.1s ease-out'
-          }}
+        <div
+          className="w-full flex-grow"
         >
           <div
             className="min-h-[150px] max-h-[800px] w-full overflow-y-auto"
