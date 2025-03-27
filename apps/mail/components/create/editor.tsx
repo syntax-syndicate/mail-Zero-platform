@@ -398,8 +398,8 @@ export default function Editor({
 
   // Function to focus the editor
   const focusEditor = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === containerRef.current) {
-      editorRef.current?.commands.focus('end');
+    if (e.target === containerRef.current && editorRef.current?.commands) {
+      editorRef.current.commands.focus('end');
     }
   };
 

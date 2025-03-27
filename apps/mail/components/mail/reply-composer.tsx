@@ -1,19 +1,87 @@
 'use client';
 
-import { type Dispatch, type SetStateAction, useRef, useState, useEffect, useCallback } from 'react';
+import { type Dispatch, type SetStateAction, useRef, useState, useEffect, useCallback, useReducer } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { UploadedFileIcon } from '@/components/create/uploaded-file-icon';
 import { ArrowUp, Paperclip, Reply, X, Plus, Sparkles, Check, X as XIcon } from 'lucide-react';
-import { cleanEmailAddress, truncateFileName } from '@/lib/utils';
+import { cleanEmailAddress, truncateFileName, cn, convertJSONToHTML, createAIJsonContent } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Editor from '@/components/create/editor';
 import { Button } from '@/components/ui/button';
 import type { ParsedMessage } from '@/types';
 import { useTranslations } from 'next-intl';
 import { sendEmail } from '@/actions/send';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { JSONContent } from 'novel';
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
+import { generateAIResponse } from '@/actions/ai-reply';
+
+// Define state interfaces
+interface ComposerState {
+  isUploading: boolean;
+  isComposerOpen: boolean;
+  isDragging: boolean;
+  isEditorFocused: boolean;
+  editorKey: number;
+  editorInitialValue?: JSONContent;
+}
+
+interface AIState {
+  isLoading: boolean;
+  suggestion: string | null;
+  showOptions: boolean;
+}
+
+// Define action types
+type ComposerAction =
+  | { type: 'SET_UPLOADING'; payload: boolean }
+  | { type: 'SET_COMPOSER_OPEN'; payload: boolean }
+  | { type: 'SET_DRAGGING'; payload: boolean }
+  | { type: 'SET_EDITOR_FOCUSED'; payload: boolean }
+  | { type: 'INCREMENT_EDITOR_KEY' }
+  | { type: 'SET_EDITOR_INITIAL_VALUE'; payload: JSONContent | undefined };
+
+type AIAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_SUGGESTION'; payload: string | null }
+  | { type: 'SET_SHOW_OPTIONS'; payload: boolean }
+  | { type: 'RESET' };
+
+// Create reducers
+const composerReducer = (state: ComposerState, action: ComposerAction): ComposerState => {
+  switch (action.type) {
+    case 'SET_UPLOADING':
+      return { ...state, isUploading: action.payload };
+    case 'SET_COMPOSER_OPEN':
+      return { ...state, isComposerOpen: action.payload };
+    case 'SET_DRAGGING':
+      return { ...state, isDragging: action.payload };
+    case 'SET_EDITOR_FOCUSED':
+      return { ...state, isEditorFocused: action.payload };
+    case 'INCREMENT_EDITOR_KEY':
+      return { ...state, editorKey: state.editorKey + 1 };
+    case 'SET_EDITOR_INITIAL_VALUE':
+      return { ...state, editorInitialValue: action.payload };
+    default:
+      return state;
+  }
+};
+
+const aiReducer = (state: AIState, action: AIAction): AIState => {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+    case 'SET_SUGGESTION':
+      return { ...state, suggestion: action.payload };
+    case 'SET_SHOW_OPTIONS':
+      return { ...state, showOptions: action.payload };
+    case 'RESET':
+      return { isLoading: false, suggestion: null, showOptions: false };
+    default:
+      return state;
+  }
+};
 
 interface ReplyComposeProps {
   emailData: ParsedMessage[];
@@ -21,33 +89,40 @@ interface ReplyComposeProps {
   setIsOpen?: Dispatch<SetStateAction<boolean>>;
 }
 
+type FormData = {
+  messageContent: string;
+};
+
 export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComposeProps) {
-  const editorRef = useRef<HTMLTextAreaElement>(null);
+  // Keep attachments separate as it's an array that needs direct manipulation
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [messageContent, setMessageContent] = useState('');
-  const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isEditorFocused, setIsEditorFocused] = useState(false);
-  const [editorHeight, setEditorHeight] = useState(150); // Initial height 150px
-  const [isResizing, setIsResizing] = useState(false);
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
-  const [showAIOptions, setShowAIOptions] = useState(false);
-  const [editorKey, setEditorKey] = useState(0);
-  const [editorInitialValue, setEditorInitialValue] = useState<JSONContent | undefined>(undefined);
-  const resizeStartY = useRef(0);
-  const startHeight = useRef(0);
+  
+  // Use reducers instead of multiple useState
+  const [composerState, composerDispatch] = useReducer(composerReducer, {
+    isUploading: false,
+    isComposerOpen: false,
+    isDragging: false,
+    isEditorFocused: false,
+    editorKey: 0,
+    editorInitialValue: undefined,
+  });
+
+  const [aiState, aiDispatch] = useReducer(aiReducer, {
+    isLoading: false,
+    suggestion: null,
+    showOptions: false,
+  });
+
   const composerRef = useRef<HTMLFormElement>(null);
   const t = useTranslations();
 
   // Use external state if provided, otherwise use internal state
-  const composerIsOpen = isOpen !== undefined ? isOpen : isComposerOpen;
+  const composerIsOpen = isOpen !== undefined ? isOpen : composerState.isComposerOpen;
   const setComposerIsOpen = (value: boolean) => {
     if (setIsOpen) {
       setIsOpen(value);
     } else {
-      setIsComposerOpen(value);
+      composerDispatch({ type: 'SET_COMPOSER_OPEN', payload: value });
     }
   };
 
@@ -64,12 +139,12 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 
   const handleAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setIsUploading(true);
+      composerDispatch({ type: 'SET_UPLOADING', payload: true });
       try {
         await new Promise((resolve) => setTimeout(resolve, 500));
         setAttachments([...attachments, ...Array.from(e.target.files)]);
       } finally {
-        setIsUploading(false);
+        composerDispatch({ type: 'SET_UPLOADING', payload: false });
       }
     }
   };
@@ -82,7 +157,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
     if (!e.target || !(e.target as HTMLElement).closest('.ProseMirror')) {
       e.preventDefault();
       e.stopPropagation();
-      setIsDragging(true);
+      composerDispatch({ type: 'SET_DRAGGING', payload: true });
     }
   };
 
@@ -90,7 +165,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
     if (!e.target || !(e.target as HTMLElement).closest('.ProseMirror')) {
       e.preventDefault();
       e.stopPropagation();
-      setIsDragging(false);
+      composerDispatch({ type: 'SET_DRAGGING', payload: false });
     }
   };
 
@@ -98,7 +173,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
     if (!e.target || !(e.target as HTMLElement).closest('.ProseMirror')) {
       e.preventDefault();
       e.stopPropagation();
-      setIsDragging(false);
+      composerDispatch({ type: 'SET_DRAGGING', payload: false });
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         setAttachments([...attachments, ...Array.from(e.dataTransfer.files)]);
@@ -134,6 +209,12 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
     `;
   };
 
+  const form = useForm<FormData>({
+    defaultValues: {
+      messageContent: '',
+    },
+  });
+
   const handleSendEmail = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     try {
@@ -149,7 +230,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
       const messageId = emailData[0]?.messageId;
       const threadId = emailData[0]?.threadId;
 
-      const formattedMessage = messageContent;
+      const formattedMessage = form.getValues('messageContent');
 
       const replyBody = constructReplyBody(
         formattedMessage,
@@ -178,7 +259,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
         },
       });
 
-      setMessageContent('');
+      form.reset();
       setComposerIsOpen(false);
       toast.success(t('pages.createEmail.emailSentSuccessfully'));
     } catch (error) {
@@ -212,8 +293,8 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 
   // Check if the message is empty
   const isMessageEmpty =
-    !messageContent ||
-    messageContent ===
+    !form.getValues('messageContent') ||
+    form.getValues('messageContent') ===
       JSON.stringify({
         type: 'doc',
         content: [
@@ -227,103 +308,8 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
   // Check if form is valid for submission
   const isFormValid = !isMessageEmpty || attachments.length > 0;
 
-  const createAIJsonContent = (text: string): JSONContent => {
-    // Try to identify common sign-off patterns with a more comprehensive regex
-    const signOffPatterns = [
-      /\b((?:Best regards|Regards|Sincerely|Thanks|Thank you|Cheers|Best|All the best|Yours truly|Yours sincerely|Cordially)(?:,)?)\s*\n+\s*([A-Za-z][A-Za-z\s.]*)$/i
-    ];
-    
-    let mainContent = text;
-    let signatureLines: string[] = [];
-    
-    // Extract sign-off if found
-    for (const pattern of signOffPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        // Find the index where the sign-off starts
-        const signOffIndex = text.lastIndexOf(match[0]);
-        if (signOffIndex > 0) {
-          // Split the content
-          mainContent = text.substring(0, signOffIndex).trim();
-          
-          // Split the signature part into separate lines
-          const signature = text.substring(signOffIndex).trim();
-          signatureLines = signature.split(/\n+/).map(line => line.trim()).filter(Boolean);
-          break;
-        }
-      }
-    }
-    
-    // If no signature was found with regex but there are newlines at the end,
-    // check if the last lines could be a signature
-    if (signatureLines.length === 0) {
-      const allLines = text.split(/\n+/);
-      if (allLines.length > 1) {
-        // Check if last 1-3 lines might be a signature (short lines at the end)
-        const potentialSigLines = allLines.slice(-3).filter(line => 
-          line.trim().length < 60 && 
-          !line.trim().endsWith('?') && 
-          !line.trim().endsWith('.')
-        );
-        
-        if (potentialSigLines.length > 0) {
-          signatureLines = potentialSigLines;
-          mainContent = allLines.slice(0, allLines.length - potentialSigLines.length).join('\n').trim();
-        }
-      }
-    }
-    
-    // Split the main content into paragraphs
-    const paragraphs = mainContent.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-    
-    if (paragraphs.length === 0 && signatureLines.length === 0) {
-      // If no paragraphs and no signature were found, treat the whole text as one paragraph
-      paragraphs.push(text);
-    }
-    
-    // Create a content array with appropriate spacing between paragraphs
-    const content = [];
-    
-    paragraphs.forEach((paragraph, index) => {
-      // Add the content paragraph
-      content.push({
-        type: "paragraph",
-        content: [{ type: "text", text: paragraph }]
-      });
-      
-      // Add an empty paragraph between main paragraphs
-      if (index < paragraphs.length - 1) {
-        content.push({
-          type: "paragraph"
-        });
-      }
-    });
-    
-    // If we found a signature, add it with proper spacing
-    if (signatureLines.length > 0) {
-      // Add spacing before the signature if there was content
-      if (paragraphs.length > 0) {
-        content.push({
-          type: "paragraph"
-        });
-      }
-      
-      // Add each line of the signature as a separate paragraph
-      signatureLines.forEach(line => {
-        content.push({
-          type: "paragraph",
-          content: [{ type: "text", text: line }]
-        });
-      });
-    }
-    
-    return {
-      type: "doc",
-      content: content
-    };
-  };
-
-  const generateAIResponse = async (): Promise<string> => {
+  const handleAIButtonClick = async () => {
+    aiDispatch({ type: 'SET_LOADING', payload: true });
     try {
       // Extract relevant information from the email thread for context
       const latestEmail = emailData[emailData.length - 1];
@@ -341,51 +327,18 @@ ${email.decodedBody || 'No content'}
           `;
         })
         .join('\n---\n');
-    
-      
-      // Call the AI API endpoint
-      const response = await fetch('/api/ai-reply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          threadContent,
-          originalSender,
-        }),
+
+      const suggestion = await generateAIResponse(threadContent, originalSender);
+      aiDispatch({ type: 'SET_SUGGESTION', payload: suggestion });
+      composerDispatch({ 
+        type: 'SET_EDITOR_INITIAL_VALUE', 
+        payload: createAIJsonContent(suggestion) 
       });
-      
-      // Store the response data
-      const responseData = await response.json();
-
-      console.log(responseData);
-      
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to generate AI response');
-      }
-      
-      return responseData.reply;
-    } catch (error) {
-      console.error('Error generating AI response:', error);
-      throw error;
-    }
-  };
-
-  const handleAIButtonClick = async () => {
-    setIsLoadingAI(true);
-    try {
-      const suggestion = await generateAIResponse();
-      setAiSuggestion(suggestion);
-
-      setEditorInitialValue(createAIJsonContent(suggestion));
-
-      setEditorKey(prevKey => prevKey + 1);
-      setShowAIOptions(true);
-      toast.success('AI reply generated! Review and edit before sending.');
+      composerDispatch({ type: 'INCREMENT_EDITOR_KEY' });
+      aiDispatch({ type: 'SET_SHOW_OPTIONS', payload: true });
     } catch (error: any) {
       console.error('Error generating AI response:', error);
       
-      // Show a more helpful error message
       let errorMessage = 'Failed to generate AI response. Please try again or compose manually.';
       
       if (error.message) {
@@ -398,65 +351,26 @@ ${email.decodedBody || 'No content'}
       
       toast.error(errorMessage);
     } finally {
-      setIsLoadingAI(false);
+      aiDispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
   const acceptAISuggestion = () => {
-    if (aiSuggestion) {
-      // Use the improved content creator to generate proper JSON structure
-      const jsonContent = createAIJsonContent(aiSuggestion);
-      
-      // Convert the JSON content to HTML
+    if (aiState.suggestion) {
+      const jsonContent = createAIJsonContent(aiState.suggestion);
       const htmlContent = convertJSONToHTML(jsonContent);
       
-      // Set the HTML content as the message content
-      setMessageContent(htmlContent);
+      form.setValue('messageContent', htmlContent);
       
-      // Reset AI state
-      setEditorInitialValue(undefined);
-      resetAIState();
+      composerDispatch({ type: 'SET_EDITOR_INITIAL_VALUE', payload: undefined });
+      aiDispatch({ type: 'RESET' });
     }
-  };
-
-  // Helper function to convert JSON content to HTML
-  const convertJSONToHTML = (jsonContent: JSONContent): string => {
-    let html = '';
-    
-    if (jsonContent.type === 'doc' && jsonContent.content) {
-      jsonContent.content.forEach(node => {
-        if (node.type === 'paragraph') {
-          if (!node.content || node.content.length === 0) {
-            // Empty paragraph
-            html += '<p><br></p>';
-          } else {
-            // Paragraph with content
-            html += '<p>';
-            node.content.forEach(inline => {
-              if (inline.type === 'text') {
-                html += inline.text || '';
-              }
-              // Handle other inline types if needed (bold, italic, etc.)
-            });
-            html += '</p>';
-          }
-        }
-        // Handle other block types if needed
-      });
-    }
-    
-    return html;
   };
 
   const rejectAISuggestion = () => {
-    setEditorInitialValue(undefined);
-    setEditorKey(prevKey => prevKey + 1);
-    resetAIState();
-  };
-
-  const resetAIState = () => {
-    setAiSuggestion(null);
-    setShowAIOptions(false);
+    composerDispatch({ type: 'SET_EDITOR_INITIAL_VALUE', payload: undefined });
+    composerDispatch({ type: 'INCREMENT_EDITOR_KEY' });
+    aiDispatch({ type: 'RESET' });
   };
 
   if (!composerIsOpen) {
@@ -483,18 +397,17 @@ ${email.decodedBody || 'No content'}
         ref={composerRef}
         className={cn(
           'border-border ring-offset-background flex h-fit flex-col space-y-2.5 rounded-[10px] border px-2 py-2 transition-shadow duration-300 ease-in-out',
-          isEditorFocused ? 'ring-2 ring-[#3D3D3D] ring-offset-1' : '',
+          composerState.isEditorFocused ? 'ring-2 ring-[#3D3D3D] ring-offset-1' : '',
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onSubmit={(e) => {
-          // Prevent default form submission
           e.preventDefault();
         }}
         onKeyDown={handleKeyDown}
       >
-        {isDragging && (
+        {composerState.isDragging && (
           <div className="bg-background/80 border-primary/30 absolute inset-0 z-50 m-4 flex items-center justify-center rounded-2xl border-2 border-dashed backdrop-blur-sm">
             <div className="text-muted-foreground flex flex-col items-center gap-2">
               <Paperclip className="text-muted-foreground h-12 w-12" />
@@ -524,35 +437,31 @@ ${email.decodedBody || 'No content'}
           </Button>
         </div>
 
-        {showAIOptions && (
+        {aiState.showOptions && (
           <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 dark:bg-blue-950 rounded-md text-xs">
-            <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-blue-700 dark:text-blue-300">AI-generated reply suggestion. Review and edit before sending.</span>
+            <Sparkles className="h-3.5 w-3.5 text-[#016FFE]" />
+            <span className="text-[#016FFE] dark:text-[#016FFE]">AI reply suggestion. Review and edit before sending.</span>
           </div>
         )}
 
-        <div
-          className="w-full flex-grow"
-        >
-          <div
-            className="min-h-[150px] max-h-[800px] w-full overflow-y-auto"
-          >
+        <div className="w-full flex-grow">
+          <div className="min-h-[150px] max-h-[800px] w-full overflow-y-auto">
             <Editor
-              key={editorKey}
+              key={composerState.editorKey}
               onChange={(content) => {
-                setMessageContent(content);
+                form.setValue('messageContent', content);
               }}
-              initialValue={editorInitialValue}
+              initialValue={composerState.editorInitialValue}
               className={cn(
                 "sm:max-w-[600px] md:max-w-[2050px]",
-                showAIOptions ? "border border-blue-200 dark:border-blue-800 rounded-md bg-blue-50/30 dark:bg-blue-950/30 p-1" : ""
+                aiState.showOptions ? "border border-blue-200 dark:border-blue-800 rounded-md bg-blue-50/30 dark:bg-blue-950/30 p-1" : ""
               )}
-              placeholder={showAIOptions ? "AI-generated reply (you can edit)" : "Type your reply here..."}
+              placeholder={aiState.showOptions ? "AI-generated reply (you can edit)" : "Type your reply here..."}
               onFocus={() => {
-                setIsEditorFocused(true);
+                composerDispatch({ type: 'SET_EDITOR_FOCUSED', payload: true });
               }}
               onBlur={() => {
-                setIsEditorFocused(false);
+                composerDispatch({ type: 'SET_EDITOR_FOCUSED', payload: false });
               }}
             />
           </div>
@@ -574,7 +483,7 @@ ${email.decodedBody || 'No content'}
               </span>
             </Button>
             
-            {!showAIOptions ? (
+            {!aiState.showOptions ? (
               <Button 
                 variant="outline" 
                 className="group relative w-9 overflow-hidden transition-all duration-200 hover:w-40"
@@ -582,15 +491,15 @@ ${email.decodedBody || 'No content'}
                   e.preventDefault();
                   void handleAIButtonClick();
                 }}
-                disabled={isLoadingAI}
+                disabled={aiState.isLoading}
               >
-                {isLoadingAI ? (
+                {aiState.isLoading ? (
                   <div className="absolute left-[9px] h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
                 ) : (
                   <Sparkles className="absolute left-[9px] h-6 w-6" />
                 )}
                 <span className="whitespace-nowrap pl-7 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  {isLoadingAI ? "Generating..." : "AI Draft Reply"}
+                  {aiState.isLoading ? "Generating..." : "AI Draft Reply"}
                 </span>
               </Button>
             ) : (
@@ -602,7 +511,6 @@ ${email.decodedBody || 'No content'}
                   onClick={(e) => {
                     e.preventDefault();
                     acceptAISuggestion();
-                    toast.success('AI reply accepted');
                   }}
                 >
                   <Check className="h-5 w-5 text-green-500" />
@@ -614,7 +522,6 @@ ${email.decodedBody || 'No content'}
                   onClick={(e) => {
                     e.preventDefault();
                     rejectAISuggestion();
-                    toast.info('AI reply discarded');
                   }}
                 >
                   <XIcon className="h-5 w-5 text-red-500" />
