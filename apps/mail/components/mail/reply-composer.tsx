@@ -288,24 +288,147 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
   const isFormValid = !isMessageEmpty || attachments.length > 0;
 
   const createAIJsonContent = (text: string): JSONContent => {
-    const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    // Try to identify common sign-off patterns with a more comprehensive regex
+    const signOffPatterns = [
+      /\b((?:Best regards|Regards|Sincerely|Thanks|Thank you|Cheers|Best|All the best|Yours truly|Yours sincerely|Cordially)(?:,)?)\s*\n+\s*([A-Za-z][A-Za-z\s.]*)$/i
+    ];
     
-    if (paragraphs.length === 0) {
+    let mainContent = text;
+    let signatureLines: string[] = [];
+    
+    // Extract sign-off if found
+    for (const pattern of signOffPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        // Find the index where the sign-off starts
+        const signOffIndex = text.lastIndexOf(match[0]);
+        if (signOffIndex > 0) {
+          // Split the content
+          mainContent = text.substring(0, signOffIndex).trim();
+          
+          // Split the signature part into separate lines
+          const signature = text.substring(signOffIndex).trim();
+          signatureLines = signature.split(/\n+/).map(line => line.trim()).filter(Boolean);
+          break;
+        }
+      }
+    }
+    
+    // If no signature was found with regex but there are newlines at the end,
+    // check if the last lines could be a signature
+    if (signatureLines.length === 0) {
+      const allLines = text.split(/\n+/);
+      if (allLines.length > 1) {
+        // Check if last 1-3 lines might be a signature (short lines at the end)
+        const potentialSigLines = allLines.slice(-3).filter(line => 
+          line.trim().length < 60 && 
+          !line.trim().endsWith('?') && 
+          !line.trim().endsWith('.')
+        );
+        
+        if (potentialSigLines.length > 0) {
+          signatureLines = potentialSigLines;
+          mainContent = allLines.slice(0, allLines.length - potentialSigLines.length).join('\n').trim();
+        }
+      }
+    }
+    
+    // Split the main content into paragraphs
+    const paragraphs = mainContent.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    
+    if (paragraphs.length === 0 && signatureLines.length === 0) {
+      // If no paragraphs and no signature were found, treat the whole text as one paragraph
       paragraphs.push(text);
+    }
+    
+    // Create a content array with appropriate spacing between paragraphs
+    const content = [];
+    
+    paragraphs.forEach((paragraph, index) => {
+      // Add the content paragraph
+      content.push({
+        type: "paragraph",
+        content: [{ type: "text", text: paragraph }]
+      });
+      
+      // Add an empty paragraph between main paragraphs
+      if (index < paragraphs.length - 1) {
+        content.push({
+          type: "paragraph"
+        });
+      }
+    });
+    
+    // If we found a signature, add it with proper spacing
+    if (signatureLines.length > 0) {
+      // Add spacing before the signature if there was content
+      if (paragraphs.length > 0) {
+        content.push({
+          type: "paragraph"
+        });
+      }
+      
+      // Add each line of the signature as a separate paragraph
+      signatureLines.forEach(line => {
+        content.push({
+          type: "paragraph",
+          content: [{ type: "text", text: line }]
+        });
+      });
     }
     
     return {
       type: "doc",
-      content: paragraphs.map(paragraph => ({
-        type: "paragraph",
-        content: [{ type: "text", text: paragraph }]
-      }))
+      content: content
     };
   };
 
-  const generateAIResponse = (): Promise<string> => {
-    // TODO: Implement AI response here
-    return Promise.resolve("Impelemted here!");
+  const generateAIResponse = async (): Promise<string> => {
+    try {
+      // Extract relevant information from the email thread for context
+      const latestEmail = emailData[emailData.length - 1];
+      const originalSender = latestEmail?.sender?.name || 'the recipient';
+      
+      // Create a summary of the thread content for context
+      const threadContent = emailData
+        .map((email) => {
+          return `
+From: ${email.sender?.name || 'Unknown'} <${email.sender?.email || 'unknown@email.com'}>
+Subject: ${email.subject || 'No Subject'}
+Date: ${new Date(email.receivedOn || '').toLocaleString()}
+
+${email.decodedBody || 'No content'}
+          `;
+        })
+        .join('\n---\n');
+    
+      
+      // Call the AI API endpoint
+      const response = await fetch('/api/ai-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          threadContent,
+          originalSender,
+        }),
+      });
+      
+      // Store the response data
+      const responseData = await response.json();
+
+      console.log(responseData);
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to generate AI response');
+      }
+      
+      return responseData.reply;
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      throw error;
+    }
   };
 
   const handleAIButtonClick = async () => {
@@ -318,9 +441,22 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 
       setEditorKey(prevKey => prevKey + 1);
       setShowAIOptions(true);
-    } catch (error) {
+      toast.success('AI reply generated! Review and edit before sending.');
+    } catch (error: any) {
       console.error('Error generating AI response:', error);
-      toast.error('Failed to generate AI response');
+      
+      // Show a more helpful error message
+      let errorMessage = 'Failed to generate AI response. Please try again or compose manually.';
+      
+      if (error.message) {
+        if (error.message.includes('OpenAI API')) {
+          errorMessage = 'AI service is currently unavailable. Please try again later.';
+        } else if (error.message.includes('key is not configured')) {
+          errorMessage = 'AI service is not properly configured. Please contact support.';
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoadingAI(false);
     }
@@ -328,15 +464,48 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
 
   const acceptAISuggestion = () => {
     if (aiSuggestion) {
-      const paragraphs = aiSuggestion.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-      const htmlContent = paragraphs.length > 0 
-        ? paragraphs.map(p => `<p>${p}</p>`).join('') 
-        : `<p>${aiSuggestion}</p>`;
+      // Use the improved content creator to generate proper JSON structure
+      const jsonContent = createAIJsonContent(aiSuggestion);
       
-      setEditorInitialValue(undefined);
+      // Convert the JSON content to HTML
+      const htmlContent = convertJSONToHTML(jsonContent);
+      
+      // Set the HTML content as the message content
       setMessageContent(htmlContent);
+      
+      // Reset AI state
+      setEditorInitialValue(undefined);
       resetAIState();
     }
+  };
+
+  // Helper function to convert JSON content to HTML
+  const convertJSONToHTML = (jsonContent: JSONContent): string => {
+    let html = '';
+    
+    if (jsonContent.type === 'doc' && jsonContent.content) {
+      jsonContent.content.forEach(node => {
+        if (node.type === 'paragraph') {
+          if (!node.content || node.content.length === 0) {
+            // Empty paragraph
+            html += '<p><br></p>';
+          } else {
+            // Paragraph with content
+            html += '<p>';
+            node.content.forEach(inline => {
+              if (inline.type === 'text') {
+                html += inline.text || '';
+              }
+              // Handle other inline types if needed (bold, italic, etc.)
+            });
+            html += '</p>';
+          }
+        }
+        // Handle other block types if needed
+      });
+    }
+    
+    return html;
   };
 
   const rejectAISuggestion = () => {
@@ -427,6 +596,13 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
         >
           <div className="w-10 h-1 rounded-full dark:bg-white bg-black" />
         </div>
+        
+        {showAIOptions && (
+          <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 dark:bg-blue-950 rounded-md text-xs">
+            <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-blue-700 dark:text-blue-300">AI-generated reply suggestion. Review and edit before sending.</span>
+          </div>
+        )}
 
         <div 
           className="w-full flex-grow overflow-hidden p-1"
@@ -450,9 +626,9 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
               initialValue={editorInitialValue}
               className={cn(
                 "sm:max-w-[600px] md:max-w-[2050px]",
-                aiSuggestion ? "text-muted-foreground" : ""
+                showAIOptions ? "border border-blue-200 dark:border-blue-800 rounded-md bg-blue-50/30 dark:bg-blue-950/30 p-1" : ""
               )}
-              placeholder="Type your reply here..."
+              placeholder={showAIOptions ? "AI-generated reply (you can edit)" : "Type your reply here..."}
               onFocus={() => {
                 setIsEditorFocused(true);
               }}
@@ -483,7 +659,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
             {!showAIOptions ? (
               <Button 
                 variant="outline" 
-                className="group relative w-9 overflow-hidden transition-all duration-200 hover:w-32"
+                className="group relative w-9 overflow-hidden transition-all duration-200 hover:w-40"
                 onClick={(e) => {
                   e.preventDefault();
                   void handleAIButtonClick();
@@ -491,12 +667,12 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
                 disabled={isLoadingAI}
               >
                 {isLoadingAI ? (
-                  <div className="absolute left-[9px] h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                  <div className="absolute left-[9px] h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
                 ) : (
                   <Sparkles className="absolute left-[9px] h-6 w-6" />
                 )}
                 <span className="whitespace-nowrap pl-7 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  {isLoadingAI ? "Loading..." : "Generate"}
+                  {isLoadingAI ? "Generating..." : "AI Draft Reply"}
                 </span>
               </Button>
             ) : (
@@ -508,6 +684,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
                   onClick={(e) => {
                     e.preventDefault();
                     acceptAISuggestion();
+                    toast.success('AI reply accepted');
                   }}
                 >
                   <Check className="h-5 w-5 text-green-500" />
@@ -519,6 +696,7 @@ export default function ReplyCompose({ emailData, isOpen, setIsOpen }: ReplyComp
                   onClick={(e) => {
                     e.preventDefault();
                     rejectAISuggestion();
+                    toast.info('AI reply discarded');
                   }}
                 >
                   <XIcon className="h-5 w-5 text-red-500" />

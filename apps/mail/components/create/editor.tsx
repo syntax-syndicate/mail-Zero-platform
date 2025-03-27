@@ -403,11 +403,6 @@ export default function Editor({
     }
   };
 
-  // Toggle AI menu
-  const toggleAIMenu = () => {
-    dispatch({ type: 'TOGGLE_AI', payload: !openAI });
-  };
-
   // Function to clear editor content
   const clearEditorContent = React.useCallback(() => {
     if (editorRef.current) {
