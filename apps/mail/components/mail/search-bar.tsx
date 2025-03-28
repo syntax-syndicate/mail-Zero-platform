@@ -841,7 +841,7 @@ export function SearchBar() {
         <Input
           placeholder={t('common.searchBar.search')}
           ref={inputRef}
-          className="bg-muted/50 text-muted-foreground ring-muted placeholder:text-muted-foreground/70 hover:bg-muted focus-visible:bg-background focus-visible:ring-ring h-8 w-full rounded-md border-none pl-9 pr-14 shadow-none ring-1 transition-colors focus-visible:ring-2"
+          className="pl-9 pr-14 h-8"
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           value={formValues.q}
@@ -851,7 +851,7 @@ export function SearchBar() {
         <AnimatePresence>
           {isFocused && (showActions || suggestionsState.show || isSearching) && (
             <motion.div
-              className="border-border bg-background absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border shadow-md"
+              className="border-border bg-background absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border-2 shadow-md md:max-w-[600px]"
               variants={container}
               initial="hidden"
               animate="show"
@@ -1028,7 +1028,7 @@ export function SearchBar() {
               <span className="sr-only">{t('common.searchBar.clearSearch')}</span>
             </button>
           )}
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          {/* <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
@@ -1221,7 +1221,7 @@ export function SearchBar() {
                 </div>
               </div>
             </PopoverContent>
-          </Popover>
+          </Popover> */}
         </div>
       </form>
     </div>
