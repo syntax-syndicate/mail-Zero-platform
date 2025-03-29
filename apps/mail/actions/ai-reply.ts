@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
+import { getUserSettings } from '@/actions/settings';
 
 // Function to truncate email thread content to fit within token limits
 function truncateThreadContent(threadContent: string, maxTokens: number = 12000): string {
@@ -40,6 +41,10 @@ export async function generateAIResponse(threadContent: string, originalSender: 
     throw new Error('OpenAI API key is not configured');
   }
 
+  // Get user settings to check for custom prompt
+  const userSettings = await getUserSettings();
+  const customPrompt = userSettings?.customPrompt || '';
+
   // Truncate the thread content to fit within token limits
   const truncatedThreadContent = truncateThreadContent(threadContent);
 
@@ -54,7 +59,7 @@ export async function generateAIResponse(threadContent: string, originalSender: 
   
   Requirements:
   - Be concise but thorough (2-3 paragraphs maximum)
-  - Maintain a professional and friendly tone
+  - Base your reply on the context provided. sometimes there will be an email that needs to be replied in an orderly manner while other times you will want a casual reply. 
   - Address the key points from the original email
   - Close with an appropriate sign-off
   - Don't use placeholder text or mention that you're an AI
@@ -62,6 +67,7 @@ export async function generateAIResponse(threadContent: string, originalSender: 
   - Don't include the subject line in the reply
   - Double space paragraphs (2 newlines)
   - Add two spaces bellow the sign-off
+  ${customPrompt ? `\nAdditional Instructions:\n${customPrompt}` : ''}
   `;
 
   try {

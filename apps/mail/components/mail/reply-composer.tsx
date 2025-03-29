@@ -437,12 +437,7 @@ ${email.decodedBody || 'No content'}
           </Button>
         </div>
 
-        {aiState.showOptions && (
-          <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 dark:bg-blue-950 rounded-md text-xs">
-            <Sparkles className="h-3.5 w-3.5 text-[#016FFE]" />
-            <span className="text-[#016FFE] dark:text-[#016FFE]">AI reply suggestion. Review and edit before sending.</span>
-          </div>
-        )}
+        
 
         <div className="w-full flex-grow">
           <div className="min-h-[150px] max-h-[800px] w-full overflow-y-auto">
@@ -454,7 +449,7 @@ ${email.decodedBody || 'No content'}
               initialValue={composerState.editorInitialValue}
               className={cn(
                 "sm:max-w-[600px] md:max-w-[2050px]",
-                aiState.showOptions ? "border border-blue-200 dark:border-blue-800 rounded-md bg-blue-50/30 dark:bg-blue-950/30 p-1" : ""
+                aiState.showOptions ? "border border-blue-200 dark:border-blue-800 border-dotted rounded-md bg-blue-50/30 dark:bg-blue-950/30 p-1" : "p-1 border border-transparent"
               )}
               placeholder={aiState.showOptions ? "AI-generated reply (you can edit)" : "Type your reply here..."}
               onFocus={() => {
@@ -493,26 +488,28 @@ ${email.decodedBody || 'No content'}
             ) : (
               <div className="flex items-center gap-1">
                 <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
+                  variant="ghost"
+                  className='hover:bg-transparent w-20 border h-9 px-12 dark:text-black text-white bg-black dark:bg-white'
+                 
                   onClick={(e) => {
                     e.preventDefault();
                     acceptAISuggestion();
                   }}
                 >
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5" />
+                  Accept
                 </Button>
                 <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
+                  variant="ghost"
+                 
+                  className='hover:bg-transparent w-20 dark:text-white/50 text-black/50'
                   onClick={(e) => {
                     e.preventDefault();
                     rejectAISuggestion();
                   }}
                 >
-                  <XIcon className="h-5 w-5 text-red-500" />
+                  <XIcon className="h-5 w-5" />
+                  Reject
                 </Button>
               </div>
             )}
@@ -599,3 +596,5 @@ ${email.decodedBody || 'No content'}
     </div>
   );
 }
+
+
