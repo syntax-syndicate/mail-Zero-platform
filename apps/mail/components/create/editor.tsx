@@ -479,7 +479,6 @@ export default function Editor({
           }
         }
 
-        // Prevent form submission on Enter key
         if (e.key === 'Enter' && !e.shiftKey) {
           e.stopPropagation();
         }
