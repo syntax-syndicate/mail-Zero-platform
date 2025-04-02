@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
 
 // Define the type for early access users (exported for use in page.tsx)
 export type EarlyAccessUser = {
@@ -93,6 +94,7 @@ export function EarlyAccessClient({
   const [selectedUsers, setSelectedUsers] = useState<EarlyAccessUser[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [customEmails, setCustomEmails] = useState('');
 
   const earlyAccessCount = earlyAccessUsers.filter((user) => user.isEarlyAccess).length;
 
@@ -102,6 +104,22 @@ export function EarlyAccessClient({
     const selected = shuffled.slice(0, Math.min(100, shuffled.length));
     setSelectedUsers(selected);
     setIsDialogOpen(true);
+  };
+
+  const handleCustomEmails = () => {
+    const emails = customEmails.split(',').map(email => email.trim());
+    const selectedUsers = earlyAccessUsers.filter(user => 
+      emails.includes(user.email) && !user.isEarlyAccess
+    );
+    
+    if (selectedUsers.length === 0) {
+      toast.error('No valid emails found. Make sure the emails exist and don\'t already have early access.');
+      return;
+    }
+
+    setSelectedUsers(selectedUsers);
+    setIsDialogOpen(true);
+    setCustomEmails(''); // Clear the input after opening dialog
   };
 
   const handleConfirm = async () => {
@@ -511,6 +529,22 @@ export function EarlyAccessClient({
             Randomize Early Access (
             {Math.min(100, earlyAccessUsers.filter((u) => !u.isEarlyAccess).length)} users)
           </Button>
+          
+          <div className="flex flex-col gap-2">
+            <Input
+              placeholder="Enter emails (comma-separated)"
+              value={customEmails}
+              onChange={(e) => setCustomEmails(e.target.value)}
+              disabled={isUpdating}
+            />
+            <Button
+              onClick={handleCustomEmails}
+              variant="secondary"
+              disabled={!customEmails.trim() || isUpdating}
+            >
+              Grant Access to Specific Emails
+            </Button>
+          </div>
         </div>
       </div>
     </>
