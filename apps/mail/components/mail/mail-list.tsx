@@ -40,7 +40,7 @@ import { useSession } from '@/lib/auth-client';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
-import items from './demo.json';
+import demo_items from './demo.json';
 import { toast } from 'sonner';
 import Link from 'next/link';
 const HOVER_DELAY = 1000; // ms before prefetching
@@ -301,10 +301,10 @@ const Thread = memo(
 Thread.displayName = 'Thread';
 
 export function MailListDemo({
-  items: filteredItems = items,
+  items: filteredItems = demo_items,
   onSelectMail,
 }: {
-  items?: typeof items;
+  items?: typeof demo_items;
   onSelectMail?: (message: any) => void;
 }) {
   return (
@@ -328,7 +328,7 @@ export function MailListDemo({
   );
 }
 
-export const MailList = memo(({ isCompact }: MailListProps) => {
+export const MailList = memo(({ isCompact, items }: MailListProps) => {
   const { folder } = useParams<{ folder: string }>();
   const [mail, setMail] = useMail();
   const { data: session } = useSession();
@@ -346,24 +346,6 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
   );
 
   const [searchValue, setSearchValue] = useSearchValue();
-
-  const {
-    data: { threads: items, nextPageToken },
-    isValidating,
-    isLoading,
-    loadMore,
-    mutate,
-  } = useThreads();
-
-  // Add event listener for refresh
-  useEffect(() => {
-    const handleRefresh = () => {
-      void mutate();
-    };
-
-    window.addEventListener('refreshMailList', handleRefresh);
-    return () => window.removeEventListener('refreshMailList', handleRefresh);
-  }, [mutate]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<VirtuosoHandle>(null);
@@ -389,12 +371,6 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
     containerRef: parentRef,
     onNavigate: handleNavigateToThread,
   });
-
-  const handleScroll = useCallback(() => {
-    if (isLoading || isValidating || !nextPageToken) return;
-    console.log('Loading more items...');
-    void loadMore();
-  }, [isLoading, isValidating, loadMore, nextPageToken]);
 
   const isKeyPressed = useKeyState();
 
@@ -554,20 +530,20 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 
   // Add effect to handle search loading state
   useEffect(() => {
-    if (isFiltering && !isLoading) {
+    if (isFiltering) {
       // Reset the search value when loading is complete
       setSearchValue((prev) => ({
         ...prev,
         isLoading: false,
       }));
     }
-  }, [isLoading, isFiltering, setSearchValue]);
+  }, [isFiltering, setSearchValue]);
 
   if (isEmpty && session) {
     if (isFiltering) {
       return (
         <div className="flex min-h-[90vh] flex-col items-center justify-center md:min-h-[90vh]">
-          {isLoading || searchValue.isLoading ? (
+          {searchValue.isLoading ? (
             <div className="flex flex-col items-center gap-4">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-900 border-t-transparent dark:border-white dark:border-t-transparent" />
               <p className="text-muted-foreground text-sm">
@@ -608,7 +584,7 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
               />
             );
           })}
-          {items.length >= 9 && nextPageToken && (
+          {/* {items.length >= 9 && (
             <Button
               variant={'ghost'}
               className="w-full rounded-none"
@@ -626,17 +602,8 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
                 </>
               )}
             </Button>
-          )}
+          )} */}
         </ScrollArea>
-      </div>
-      <div className="w-full pt-4 text-center">
-        {isLoading || isValidating ? (
-          <div className="text-center">
-            <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-neutral-900 border-t-transparent dark:border-white dark:border-t-transparent" />
-          </div>
-        ) : (
-          <div className="h-4" />
-        )}
       </div>
     </>
   );

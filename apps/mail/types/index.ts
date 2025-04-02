@@ -91,9 +91,10 @@ export interface Attachment {
 }
 export interface MailListProps {
   isCompact?: boolean;
+  items: InitialThread[];
 }
 
-export type MailSelectMode = "mass" | "range" | "single" | "selectAllBelow";
+export type MailSelectMode = 'mass' | 'range' | 'single' | 'selectAllBelow';
 
 export type ThreadProps = {
   message: InitialThread;
