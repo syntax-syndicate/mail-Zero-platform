@@ -323,7 +323,7 @@ export function EarlyAccessClient({
                 <tr>
                   <td>
                     <a
-                      href="https://staging.0.email/login"
+                      href="https://0.email/login"
                       style="background-color:rgb(0,0,0);color:rgb(255,255,255);font-weight:700;padding:16px 32px;border-radius:4px;text-decoration-line:none;text-align:center;box-sizing:border-box;line-height:100%;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px"
                       target="_blank"
                       ><span
