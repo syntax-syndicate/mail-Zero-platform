@@ -1,19 +1,8 @@
 'use server';
 import { deleteActiveConnection, FatalErrors, getActiveDriver } from './utils';
+import { IGetThreads } from '@/types';
 
-export const getMails = async ({
-  folder,
-  q,
-  max,
-  labelIds,
-  pageToken,
-}: {
-  folder: string;
-  q?: string;
-  max?: number;
-  labelIds?: string[];
-  pageToken: string | number | undefined;
-}) => {
+export const getMails = async ({ folder, q, max, labelIds, pageToken }: IGetThreads) => {
   if (!folder) {
     throw new Error('Missing required fields');
   }

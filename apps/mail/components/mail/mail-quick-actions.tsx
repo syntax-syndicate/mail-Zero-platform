@@ -139,22 +139,6 @@ export const MailQuickActions = memo(
       [message, mutate, t, isProcessing, isLoading, closeThreadIfOpen],
     );
 
-    const handleDelete = useCallback(
-      async (e?: React.MouseEvent) => {
-        // TODO: Implement delete
-        toast.info(t('common.mail.moveToTrash'));
-      },
-      [t],
-    );
-
-    const handleQuickReply = useCallback(
-      async (e?: React.MouseEvent) => {
-        // TODO: Implement quick reply
-        toast.info(t('common.mail.reply'));
-      },
-      [t],
-    );
-
     const quickActions = [
       {
         action: handleArchive,

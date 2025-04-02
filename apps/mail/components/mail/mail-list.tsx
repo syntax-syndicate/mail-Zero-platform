@@ -5,35 +5,27 @@ import {
   Bell,
   Briefcase,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Star,
   StickyNote,
   Tag,
   User,
   Users,
 } from 'lucide-react';
-import {
-  type ComponentProps,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
 import type { ConditionalThreadProps, InitialThread, MailListProps, MailSelectMode } from '@/types';
+import { type ComponentProps, memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmptyState, type FolderType } from '@/components/mail/empty-state';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { useMailNavigation } from '@/hooks/use-mail-navigation';
-import { preloadThread, useThreads } from '@/hooks/use-threads';
 import { useHotKey, useKeyState } from '@/hooks/use-hot-key';
 import { cn, formatDate, getEmailLogo } from '@/lib/utils';
 import { useSearchValue } from '@/hooks/use-search-value';
 import { markAsRead, markAsUnread } from '@/actions/mail';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { highlightText } from '@/lib/email-utils.client';
-import { MailQuickActions } from './mail-quick-actions';
 import { useMail } from '@/components/mail/use-mail';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import { useSession } from '@/lib/auth-client';
@@ -43,19 +35,13 @@ import { Button } from '../ui/button';
 import demo_items from './demo.json';
 import { toast } from 'sonner';
 import Link from 'next/link';
-const HOVER_DELAY = 1000; // ms before prefetching
 
 const Thread = memo(
   ({
     message,
-    selectMode,
     demo,
     onClick,
-    sessionData,
     isKeyboardFocused,
-    isInQuickActionMode,
-    selectedQuickActionIndex,
-    resetNavigation,
   }: ConditionalThreadProps & {
     folder?: string;
     isKeyboardFocused?: boolean;
@@ -69,10 +55,7 @@ const Thread = memo(
     const searchParams = useSearchParams();
     const threadIdParam = searchParams.get('threadId');
     const { folder } = useParams<{ folder: string }>();
-    const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const isHovering = useRef<boolean>(false);
-    const hasPrefetched = useRef<boolean>(false);
-    const [isHovered, setIsHovered] = useState(false);
+
     const isMailSelected = useMemo(() => {
       const threadId = message.threadId ?? message.id;
       return threadId === threadIdParam;
@@ -83,55 +66,6 @@ const Thread = memo(
     const threadLabels = useMemo(() => {
       return [...(message.tags || [])];
     }, [message.tags]);
-
-    const handleMouseEnter = () => {
-      if (demo) return;
-      isHovering.current = true;
-      setIsHovered(true);
-
-      // Prefetch only in single select mode
-      if (selectMode === 'single' && sessionData?.userId && !hasPrefetched.current) {
-        // Clear any existing timeout
-        if (hoverTimeoutRef.current) {
-          clearTimeout(hoverTimeoutRef.current);
-        }
-
-        // Set new timeout for prefetch
-        hoverTimeoutRef.current = setTimeout(() => {
-          if (isHovering.current) {
-            const messageId = message.threadId ?? message.id;
-            // Only prefetch if still hovering and hasn't been prefetched
-            console.log(
-              `🕒 Hover threshold reached for email ${messageId}, initiating prefetch...`,
-            );
-            void preloadThread(sessionData.userId, messageId, sessionData.connectionId ?? '');
-            hasPrefetched.current = true;
-          }
-        }, HOVER_DELAY);
-      }
-    };
-
-    const handleMouseLeave = () => {
-      isHovering.current = false;
-      setIsHovered(false);
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-
-    // Reset prefetch flag when message changes
-    useEffect(() => {
-      hasPrefetched.current = false;
-    }, [message.id]);
-
-    // Cleanup timeout on unmount
-    useEffect(() => {
-      return () => {
-        if (hoverTimeoutRef.current) {
-          clearTimeout(hoverTimeoutRef.current);
-        }
-      };
-    }, []);
 
     return (
       <div className="p-1" onClick={onClick ? onClick(message) : undefined}>
@@ -215,10 +149,9 @@ const Thread = memo(
           </div>
         ) : (
           <Link
-            href={`/mail/${folder}?threadId=${message.threadId ?? message.id}`}
+            prefetch={true}
+            href={`/mail/${folder}/${message.threadId ?? message.id}`}
             data-thread-id={message.threadId ?? message.id}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
             key={message.threadId ?? message.id}
             className={cn(
               'hover:bg-offsetLight hover:bg-primary/5 group relative flex cursor-pointer flex-col items-start overflow-clip rounded-lg border border-transparent px-4 py-3 text-left text-sm transition-all hover:opacity-100',
@@ -328,7 +261,7 @@ export function MailListDemo({
   );
 }
 
-export const MailList = memo(({ isCompact, items }: MailListProps) => {
+export const MailList = memo(({ items, next, size }: MailListProps) => {
   const { folder } = useParams<{ folder: string }>();
   const [mail, setMail] = useMail();
   const { data: session } = useSession();
@@ -336,6 +269,8 @@ export const MailList = memo(({ isCompact, items }: MailListProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadIdParam = searchParams.get('threadId');
+  const current = searchParams.get('pageToken');
+  const prev = searchParams.get('prev');
 
   const sessionData = useMemo(
     () => ({
@@ -539,6 +474,8 @@ export const MailList = memo(({ isCompact, items }: MailListProps) => {
     }
   }, [isFiltering, setSearchValue]);
 
+  const handlePrev = () => router.back();
+
   if (isEmpty && session) {
     if (isFiltering) {
       return (
@@ -573,7 +510,6 @@ export const MailList = memo(({ isCompact, items }: MailListProps) => {
               <Thread
                 onClick={handleMailClick}
                 selectMode={getSelectMode()}
-                isCompact={isCompact}
                 sessionData={sessionData}
                 message={data}
                 key={data.id}
@@ -584,25 +520,24 @@ export const MailList = memo(({ isCompact, items }: MailListProps) => {
               />
             );
           })}
-          {/* {items.length >= 9 && (
-            <Button
-              variant={'ghost'}
-              className="w-full rounded-none"
-              onClick={handleScroll}
-              disabled={isLoading || isValidating}
-            >
-              {isLoading || isValidating ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-900 border-t-transparent dark:border-white dark:border-t-transparent" />
-                  {t('common.actions.loading')}
-                </div>
-              ) : (
+          <div className="flex justify-between">
+            {size && size > items.length && (
+              <Button variant={'ghost'} onClick={handlePrev} className="rounded-none">
                 <>
-                  {t('common.mail.loadMore')} <ChevronDown />
+                  Back <ChevronLeft />
                 </>
-              )}
-            </Button>
-          )} */}
+              </Button>
+            )}
+            {size && size > items.length && (
+              <Link prefetch={true} href={`?pageToken=${next}&prev=${current ?? ''}`}>
+                <Button variant={'ghost'} className="rounded-none">
+                  <>
+                    Next <ChevronRight />
+                  </>
+                </Button>
+              </Link>
+            )}
+          </div>
         </ScrollArea>
       </div>
     </>
