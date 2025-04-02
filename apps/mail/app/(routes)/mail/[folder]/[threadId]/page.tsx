@@ -16,8 +16,8 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
 
   return (
     <MailLayout>
-      <div className="flex gap-4">
-        <div className="w-[33%]">
+      <div className="flex h-[calc(100vh-4rem)]">
+        <div className="w-full md:w-[33%]">
           <Suspense
             fallback={
               <div className="flex flex-col">
@@ -43,7 +43,7 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
             <SRMailList pageToken={pageToken} max={max} q={q} folder={folder} />
           </Suspense>
         </div>
-        <div className="w-[66%]">
+        <div className="hidden md:block md:w-[67%] border-l">
           <Suspense fallback={<p>Loading</p>}>
             <SRThreadDisplay messages={threadMessages ?? []} />
           </Suspense>

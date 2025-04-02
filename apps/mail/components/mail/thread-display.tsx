@@ -6,6 +6,7 @@ import { ArchiveX, Forward, ReplyAll, Star, StarOff } from 'lucide-react';
 import { useSearchParams, useParams } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { moveThreadsTo, ThreadDestination } from '@/lib/thread-actions';
 import { MoreVerticalIcon } from '../icons/animated/more-vertical';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -457,8 +458,8 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
             </DropdownMenu>
           </div>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <ScrollArea className="h-full flex-1" type="auto">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ScrollArea className="flex-1" type="auto">
             <div className="pb-4">
               {[...(emailData || [])].reverse().map((message, index) => (
                 <div
@@ -479,7 +480,7 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
               ))}
             </div>
           </ScrollArea>
-          <div className={`relative ${isFullscreen ? '' : 'top-1'} flex-shrink-0`}>
+          <div className="bg-background sticky bottom-0 w-full border-t">
             <ReplyCompose
               emailData={emailData}
               isOpen={isReplyOpen || isForwardOpen}
@@ -506,6 +507,7 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isForwardOpen, setIsForwardOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const t = useTranslations();
   const { mutate: mutateStats } = useStats();
   const { folder } = useParams<{ folder: string }>();
@@ -571,105 +573,21 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
-  // if (isLoading || !emailData)
-  //   return (
-  //     <div
-  //       className={cn(
-  //         'flex flex-col',
-  //         isFullscreen ? 'h-screen' : isMobile ? 'h-full' : 'h-[calc(100vh-2rem)]',
-  //       )}
-  //     >
-  //       <div
-  //         className={cn(
-  //           'bg-offsetLight dark:bg-offsetDark relative flex flex-col overflow-hidden transition-all duration-300',
-  //           isMobile ? 'h-full' : 'h-full',
-  //           !isMobile && !isFullscreen && 'rounded-r-lg',
-  //           isFullscreen ? 'fixed inset-0 z-50' : '',
-  //         )}
-  //       >
-  //         <div className="flex flex-shrink-0 items-center border-b px-1 pb-1 md:px-3 md:pb-2 md:pt-[10px]">
-  //           <div className="flex flex-1 items-center">
-  //             <ThreadActionButton
-  //               icon={XIcon}
-  //               label={t('common.actions.close')}
-  //               onClick={handleClose}
-  //             />
-  //           </div>
-  //           <div className="flex items-center gap-1 sm:gap-2 md:gap-6">
-  //             <ThreadActionButton
-  //               icon={isFullscreen ? ExpandIcon : ExpandIcon}
-  //               label={
-  //                 isFullscreen
-  //                   ? t('common.threadDisplay.exitFullscreen')
-  //                   : t('common.threadDisplay.enterFullscreen')
-  //               }
-  //               onClick={() => setIsFullscreen(!isFullscreen)}
-  //             />
+  // Close drawer when screen becomes larger than mobile
+  useEffect(() => {
+    if (!isMobile) {
+      setIsDrawerOpen(false);
+    } else {
+      setIsDrawerOpen(true);
+    }
+  }, [isMobile]);
 
-  //             <ThreadActionButton
-  //               icon={ArchiveIcon}
-  //               label={t('common.threadDisplay.archive')}
-  //               disabled={true}
-  //               className="relative top-0.5"
-  //             />
-
-  //             <ThreadActionButton
-  //               icon={!emailData || emailData[0]?.tags?.includes('STARRED') ? StarOff : Star}
-  //               label={t('common.threadDisplay.favourites')}
-  //               onClick={handleFavourites}
-  //               className="relative top-0.5"
-  //             />
-
-  //             <ThreadActionButton
-  //               icon={ReplyIcon}
-  //               label={t('common.threadDisplay.reply')}
-  //               disabled={true}
-  //             />
-
-  //             <DropdownMenu>
-  //               <DropdownMenuTrigger asChild>
-  //                 <Button
-  //                   variant="ghost"
-  //                   className="h-8 w-8 p-0 md:h-fit md:w-auto md:px-2"
-  //                   disabled={true}
-  //                 >
-  //                   <MoreVerticalIcon className="h-4 w-4" />
-  //                   <span className="sr-only">{t('common.threadDisplay.moreOptions')}</span>
-  //                 </Button>
-  //               </DropdownMenuTrigger>
-  //               <DropdownMenuContent align="end">
-  //                 <DropdownMenuItem>
-  //                   <ArchiveX className="mr-2 h-4 w-4" /> {t('common.threadDisplay.moveToSpam')}
-  //                 </DropdownMenuItem>
-  //                 <DropdownMenuItem>
-  //                   <ReplyAll className="mr-2 h-4 w-4" /> {t('common.threadDisplay.replyAll')}
-  //                 </DropdownMenuItem>
-  //                 <DropdownMenuItem onClick={handleForward}>
-  //                   <Forward className="mr-2 h-4 w-4" /> {t('common.threadDisplay.forward')}
-  //                 </DropdownMenuItem>
-  //                 <DropdownMenuItem>{t('common.threadDisplay.markAsUnread')}</DropdownMenuItem>
-  //                 <DropdownMenuItem>{t('common.threadDisplay.addLabel')}</DropdownMenuItem>
-  //                 <DropdownMenuItem>{t('common.threadDisplay.muteThread')}</DropdownMenuItem>
-  //               </DropdownMenuContent>
-  //             </DropdownMenu>
-  //           </div>
-  //         </div>
-  //         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-  //           <ScrollArea className="h-full flex-1" type="auto">
-  //             <div className="pb-4">
-  //               <MailDisplaySkeleton isFullscreen={isFullscreen} />
-  //             </div>
-  //           </ScrollArea>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-
-  return (
+  // Extract the main content into a reusable component
+  const ThreadContent = () => (
     <div
       className={cn(
         'flex flex-col',
-        isFullscreen ? 'h-screen' : isMobile ? 'h-full' : 'h-[calc(100vh-2rem)]',
+        isFullscreen ? 'h-screen' : isMobile ? 'h-full' : 'h-[calc(100vh-5rem)]',
       )}
     >
       <div
@@ -751,8 +669,8 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
             </DropdownMenu>
           </div>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <ScrollArea className="h-full flex-1" type="auto">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ScrollArea className="flex-1" type="auto">
             <div className="pb-4">
               {[...(messages || [])].reverse().map((message, index) => (
                 <div
@@ -773,7 +691,7 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
               ))}
             </div>
           </ScrollArea>
-          <div className={`relative ${isFullscreen ? '' : 'top-1'} flex-shrink-0`}>
+          <div className="bg-background sticky bottom-0 w-full border-t">
             <ReplyCompose
               emailData={messages}
               isOpen={isReplyOpen || isForwardOpen}
@@ -790,5 +708,27 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
         </div>
       </div>
     </div>
+  );
+
+  // Return different layouts based on screen size
+  return (
+    <>
+      {/* Desktop view */}
+      <div className="hidden h-full md:block">
+        <ThreadContent />
+      </div>
+
+      {/* Mobile/Tablet drawer view - only render on mobile */}
+      {isMobile && (
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <DrawerTitle className="hidden"></DrawerTitle>
+          <DrawerContent className="h-[95vh] bg-white dark:bg-black">
+            <div className="flex-1 overflow-auto">
+              <ThreadContent />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
+    </>
   );
 }
