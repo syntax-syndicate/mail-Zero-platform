@@ -520,17 +520,17 @@ export const MailList = memo(({ items, next, size }: MailListProps) => {
               />
             );
           })}
-          <div className="flex justify-between">
+          <div className="flex justify-center pb-3">
             {size && size > items.length && (
-              <Button variant={'ghost'} onClick={handlePrev} className="rounded-none">
+              <Button variant={'ghost'} onClick={handlePrev}>
                 <>
-                  Back <ChevronLeft />
+                <ChevronLeft /> Back
                 </>
               </Button>
             )}
             {size && size > items.length && (
               <Link prefetch={true} href={`?pageToken=${next}&prev=${current ?? ''}`}>
-                <Button variant={'ghost'} className="rounded-none">
+                <Button variant={'ghost'}>
                   <>
                     Next <ChevronRight />
                   </>
