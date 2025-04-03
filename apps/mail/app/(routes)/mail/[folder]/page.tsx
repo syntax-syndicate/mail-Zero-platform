@@ -1,11 +1,13 @@
-import { IGetThreads, MailPageProps } from '@/types';
+import { IGetThreads, MailPageProps, ParsedMessage } from '@/types';
+import { SRThreadDisplay } from '@/components/mail/thread-display';
+import { getMail, getMails, markAsRead } from '@/actions/mail';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MailLayout } from '@/components/mail/mail';
 import { redirect } from 'next/navigation';
 import { SRMailList } from './list.server';
-import { getMails } from '@/actions/mail';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import { Suspense } from 'react';
 
 const ALLOWED_FOLDERS = ['inbox', 'draft', 'sent', 'spam', 'trash', 'archive'];
@@ -16,8 +18,12 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
 
   if (!session) redirect('/login');
 
-  const { threadId, folder } = await params;
-  const { pageToken, q, max, labelIds } = await searchParams;
+  const { folder } = await params;
+  const { pageToken, q, max, labelIds, threadId } = await searchParams;
+
+  let threadMessages: ParsedMessage[] = [];
+  if (threadId) threadMessages = (await getMail({ id: threadId })) ?? [];
+  if (threadMessages && threadMessages.some((e) => e.unread)) void markAsRead({ ids: [threadId] });
   const threadsResponse = await getMails({
     folder,
     q,
@@ -31,10 +37,44 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
   }
 
   return (
-    <SRMailList
-      threads={threadsResponse?.threads}
-      nextPageToken={threadsResponse?.nextPageToken}
-      resultSizeEstimate={threadsResponse?.resultSizeEstimate}
-    />
+    <div className="flex h-[calc(100vh-4rem)]">
+      <div className={cn(threadId ? 'md:w-[33%]' : 'w-full')}>
+        <Suspense
+          fallback={
+            <div className="flex flex-col">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex flex-col px-4 py-3">
+                  <div className="flex w-full items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                  <Skeleton className="mt-2 h-3 w-32" />
+                  <Skeleton className="mt-2 h-3 w-full" />
+                  <div className="mt-2 flex gap-2">
+                    <Skeleton className="h-4 w-16 rounded-md" />
+                    <Skeleton className="h-4 w-16 rounded-md" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          }
+        >
+          <SRMailList
+            resultSizeEstimate={threadsResponse?.resultSizeEstimate}
+            threads={threadsResponse?.threads}
+            nextPageToken={threadsResponse?.nextPageToken}
+          />
+        </Suspense>
+      </div>
+      {threadId ? (
+        <div className="hidden border-l md:block md:w-[67%]">
+          <Suspense fallback={<p>Loading</p>}>
+            <SRThreadDisplay messages={threadMessages ?? []} />
+          </Suspense>
+        </div>
+      ) : null}
+    </div>
   );
 }

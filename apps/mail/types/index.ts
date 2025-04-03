@@ -17,7 +17,7 @@ export interface MailPageProps {
     folder: string;
     threadId: string;
   }>;
-  searchParams: Promise<IGetThreads>;
+  searchParams: Promise<IGetThreads & { threadId: string }>;
 }
 
 export interface Account {
