@@ -9,6 +9,10 @@ import { Suspense } from 'react';
 export default async function MailPage({ params, searchParams }: MailPageProps) {
   const { threadId, folder } = await params;
   const { pageToken, q, max, labelIds } = await searchParams;
+
+  let threadMessages: ParsedMessage[] = [];
+  if (threadId) threadMessages = (await getMail({ id: threadId })) ?? [];
+  if (threadMessages && threadMessages.some((e) => e.unread)) void markAsRead({ ids: [threadId] });
   const threadsResponse = await getMails({
     folder,
     q,
@@ -16,11 +20,6 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
     pageToken,
     labelIds,
   });
-
-  let threadMessages: ParsedMessage[] = [];
-  if (threadId) threadMessages = (await getMail({ id: threadId })) ?? [];
-  if (threadMessages && threadMessages.some((e) => e.unread)) await markAsRead({ ids: [threadId] });
-
   return (
     <MailLayout>
       <div className="flex h-[calc(100vh-4rem)]">
