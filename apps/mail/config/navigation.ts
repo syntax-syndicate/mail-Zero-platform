@@ -1,18 +1,19 @@
-import { MessageSquareIcon } from '@/components/icons/animated/message-square';
-import { SettingsGearIcon } from '@/components/icons/animated/settings-gear';
-import { CheckCheckIcon } from '@/components/icons/animated/check-check';
-import { ArrowLeftIcon } from '@/components/icons/animated/arrow-left';
-import { BookTextIcon } from '@/components/icons/animated/book-text';
-import { ShieldCheckIcon } from '@/components/icons/animated/shield';
-import { KeyboardIcon } from '@/components/icons/animated/keyboard';
-import { SparklesIcon } from '@/components/icons/animated/sparkles';
-import { ArchiveIcon } from '@/components/icons/animated/archive';
-import { DeleteIcon } from '@/components/icons/animated/trash';
-import { UsersIcon } from '@/components/icons/animated/users';
-import { InboxIcon } from '@/components/icons/animated/inbox';
-import { XIcon } from '@/components/icons/animated/x';
-import { NestedKeyOf } from 'next-intl';
-import { MessageKeys } from 'next-intl';
+import { SettingsGearIcon } from "@/components/icons/animated/settings-gear";
+import { CheckCheckIcon } from "@/components/icons/animated/check-check";
+import { ArrowLeftIcon } from "@/components/icons/animated/arrow-left";
+import { BookTextIcon } from "@/components/icons/animated/book-text";
+import { ShieldCheckIcon } from "@/components/icons/animated/shield";
+import { KeyboardIcon } from "@/components/icons/animated/keyboard";
+import { SparklesIcon } from "@/components/icons/animated/sparkles";
+import { ArchiveIcon } from "@/components/icons/animated/archive";
+import { DeleteIcon } from "@/components/icons/animated/trash";
+import { UsersIcon } from "@/components/icons/animated/users";
+import { InboxIcon } from "@/components/icons/animated/inbox";
+import { XIcon } from "@/components/icons/animated/x";
+import { NestedKeyOf } from "next-intl";
+import { MessageKeys } from "next-intl";
+import { MessageSquareIcon } from "@/components/icons/animated/message-square";
+
 export interface NavItem {
   id?: string;
   title: string;
@@ -22,7 +23,7 @@ export interface NavItem {
   isBackButton?: boolean;
   isSettingsButton?: boolean;
   disabled?: boolean;
-  isFeaturebaseButton?: boolean;
+  target?: string;
 }
 export type MessageKey = MessageKeys<IntlMessages, NestedKeyOf<IntlMessages>>;
 
@@ -89,11 +90,11 @@ export const navigationConfig: Record<string, NavConfig> = {
             isSettingsButton: true,
           },
           {
-            id: 'feedback',
-            title: 'navigation.sidebar.feedback',
-            url: '#',
+            id:'feedback',
+            title: "navigation.sidebar.feedback",
+            url: "https://feedback.0.email",
             icon: MessageSquareIcon,
-            isFeaturebaseButton: true,
+            target: "_blank",
           },
         ],
       },
@@ -123,16 +124,6 @@ export const navigationConfig: Record<string, NavConfig> = {
       //       url: "/mail/inbox?category=shopping",
       //       icon: CartIcon,
       //       badge: 8,
-      //     },
-      //   ],
-      // },
-      // {
-      //   title: "Advanced",
-      //   items: [
-      //     {
-      //       title: "Settings",
-      //       url: "/settings",
-      //       icon: SettingsGearIcon,
       //     },
       //   ],
       // },
