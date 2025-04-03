@@ -152,11 +152,7 @@ const Thread = memo(
             shallow
             scroll={false}
             prefetch={true}
-            href={
-              selectMode !== 'single'
-                ? `/mail/${folder}/${message.threadId ?? message.id}?pageToken=${pageToken ?? ''}${searchQuery ? `&q=${searchQuery}` : ''}`
-                : '#'
-            }
+            href={`/mail/${folder}/${message.threadId ?? message.id}?pageToken=${pageToken ?? ''}${searchQuery ? `&q=${searchQuery}` : ''}`}
             data-thread-id={message.threadId ?? message.id}
             key={message.threadId ?? message.id}
             className={cn(
