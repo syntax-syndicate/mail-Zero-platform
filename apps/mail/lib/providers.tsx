@@ -13,9 +13,7 @@ export function Providers({ children, ...props }: React.ComponentProps<typeof Ne
       <JotaiProvider>
         <NuqsAdapter>
           <NextThemesProvider {...props}>
-            <SidebarProvider>
-              <PostHogProvider>{children}</PostHogProvider>
-            </SidebarProvider>
+            <SidebarProvider>{children}</SidebarProvider>
           </NextThemesProvider>
         </NuqsAdapter>
       </JotaiProvider>
