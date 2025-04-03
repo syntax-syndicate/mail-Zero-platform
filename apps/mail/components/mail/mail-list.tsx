@@ -53,13 +53,14 @@ const Thread = memo(
     const [searchValue] = useSearchValue();
     const t = useTranslations();
     const searchParams = useSearchParams();
-    const threadIdParam = searchParams.get('threadId');
-    const { folder } = useParams<{ folder: string }>();
+    const { threadId, folder } = useParams<{ threadId: string; folder: string }>();
+    const pageToken = searchParams.get('pageToken');
+    const searchQuery = searchParams.get('q');
 
     const isMailSelected = useMemo(() => {
-      const threadId = message.threadId ?? message.id;
-      return threadId === threadIdParam;
-    }, [message.id, message.threadId, threadIdParam]);
+      const _threadId = message.threadId ?? message.id;
+      return _threadId === threadId;
+    }, [message.id, message.threadId, threadId]);
 
     const isMailBulkSelected = mail.bulkSelected.includes(message.id);
 
@@ -72,8 +73,6 @@ const Thread = memo(
         {demo ? (
           <div
             data-thread-id={message.threadId ?? message.id}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
             key={message.threadId ?? message.id}
             className={cn(
               'hover:bg-offsetLight hover:bg-primary/5 group relative flex cursor-pointer flex-col items-start overflow-clip rounded-lg border border-transparent px-4 py-3 text-left text-sm transition-all hover:opacity-100',
@@ -149,8 +148,9 @@ const Thread = memo(
           </div>
         ) : (
           <Link
+            shallow
             prefetch={true}
-            href={`/mail/${folder}/${message.threadId ?? message.id}`}
+            href={`/mail/${folder}/${message.threadId ?? message.id}?pageToken=${pageToken ?? ''}${searchQuery ? `&q=${searchQuery}` : ''}`}
             data-thread-id={message.threadId ?? message.id}
             key={message.threadId ?? message.id}
             className={cn(
@@ -524,7 +524,7 @@ export const MailList = memo(({ items, next, size }: MailListProps) => {
             {size && size > items.length && (
               <Button variant={'ghost'} onClick={handlePrev}>
                 <>
-                <ChevronLeft /> Back
+                  <ChevronLeft /> Back
                 </>
               </Button>
             )}

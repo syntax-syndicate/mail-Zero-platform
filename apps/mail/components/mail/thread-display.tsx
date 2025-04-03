@@ -3,7 +3,7 @@ import { DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArchiveX, Forward, ReplyAll, Star, StarOff, X } from 'lucide-react';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -501,8 +501,8 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
 }
 
 export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
-  const searchParams = useSearchParams();
   const [isMuted, setIsMuted] = useState(false);
+  const router = useRouter();
   const isMobile = useIsMobile();
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -510,10 +510,7 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const t = useTranslations();
   const { mutate: mutateStats } = useStats();
-  const { folder } = useParams<{ folder: string }>();
-  const threadIdParam = searchParams.get('threadId');
-  const threadId = threadIdParam ?? '';
-
+  const { folder, threadId } = useParams<{ folder: string; threadId: string }>();
   const moreVerticalIconRef = useRef<any>(null);
 
   const isInInbox = folder === FOLDERS.INBOX || !folder;
@@ -526,47 +523,56 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
         threadIds: [threadId],
         currentFolder: folder,
         destination,
-      }).then(async () => {
-        alert('reload');
-        // await Promise.all([mutateThread(), mutateStats()]);
-        // handleClose();
-      });
+      })
+        .then(() => {
+          handleClose();
+          router.refresh();
+        })
+        .catch(console.warn);
     },
     [threadId, folder, mutateStats],
   );
 
-  // useEffect(() => {
-  //   if (emailData?.[0]) {
-  //     setIsMuted(emailData[0].unread ?? false);
-  //   }
-  // }, [emailData]);
+  useEffect(() => {
+    if (messages?.[0]) {
+      setIsMuted(messages[0].unread ?? false);
+    }
+  }, [messages]);
 
   const handleFavourites = async () => {
+    if (!threadId) return;
+    const done = () => router.refresh();
     if (messages[0]?.tags?.includes('STARRED')) {
-      toast.promise(modifyLabels({ threadId: [threadId], removeLabels: ['STARRED'] }), {
-        success: 'Removed from favourites.',
-        loading: 'Removing from favourites',
-        error: 'Failed to remove from favourites.',
-      });
+      toast.promise(
+        modifyLabels({ threadId: [threadId], removeLabels: ['STARRED'] }).then(() => done()),
+        {
+          success: 'Removed from favourites.',
+          loading: 'Removing from favourites',
+          error: 'Failed to remove from favourites.',
+        },
+      );
     } else {
-      toast.promise(modifyLabels({ threadId: [threadId], addLabels: ['STARRED'] }), {
-        success: 'Added to favourites.',
-        loading: 'Adding to favourites.',
-        error: 'Failed to add to favourites.',
-      });
+      toast.promise(
+        modifyLabels({ threadId: [threadId], addLabels: ['STARRED'] }).then(() => done()),
+        {
+          success: 'Added to favourites.',
+          loading: 'Adding to favourites.',
+          error: 'Failed to add to favourites.',
+        },
+      );
     }
-
-    // await Promise.all([mutateThread(), mutateThreads()]);
   };
 
   const handleForward = () => {
     setIsForwardOpen(true);
   };
 
+  const handleClose = () => router.push(`/mail/${folder}/`);
+
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        alert('go back');
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleEsc);
@@ -599,7 +605,7 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
         )}
       >
         <div className="flex flex-shrink-0 items-center border-b px-1 pb-1 md:px-3 md:pb-2 md:pt-[10px]">
-          <div className="flex flex-1 items-center gap-2 ml-2 md:ml-0">
+          <div className="ml-2 flex flex-1 items-center gap-2 md:ml-0">
             <Link href={`/mail/${folder}`}>
               <X className="h-4 w-4" />
             </Link>
@@ -624,6 +630,12 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
               onClick={() => moveThreadTo('archive')}
             />
             <ThreadActionButton
+              icon={messages[0]?.tags?.includes('STARRED') ? StarOff : Star}
+              label={t('common.threadDisplay.favourites')}
+              onClick={handleFavourites}
+              className="relative top-0.5"
+            />
+            <ThreadActionButton
               icon={ReplyIcon}
               label={t('common.threadDisplay.reply')}
               onClick={() => setIsReplyOpen(true)}
@@ -631,6 +643,7 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  disabled
                   variant="ghost"
                   className="md:h-fit md:px-2"
                   onMouseEnter={() => moreVerticalIconRef.current?.startAnimation?.()}

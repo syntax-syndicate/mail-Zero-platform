@@ -25,45 +25,35 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  moveThreadsTo,
-  ThreadDestination,
-  isActionAvailable,
-  getAvailableActions,
-} from '@/lib/thread-actions';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { moveThreadsTo, ThreadDestination, getAvailableActions } from '@/lib/thread-actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
 import { ThreadDisplay, ThreadDemo } from '@/components/mail/thread-display';
-import { MailList, MailListDemo } from '@/components/mail/mail-list';
 import { handleUnsubscribe } from '@/lib/email-utils.client';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useMediaQuery } from '../../hooks/use-media-query';
+import { MailListDemo } from '@/components/mail/mail-list';
 import { useSearchValue } from '@/hooks/use-search-value';
 import { useMail } from '@/components/mail/use-mail';
 import { SidebarToggle } from '../ui/sidebar-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clearBulkSelectionAtom } from './use-mail';
-import { cn, defaultPageSize } from '@/lib/utils';
 import { useThreads } from '@/hooks/use-threads';
-import { MessageKey } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
-import { useHotKey } from '@/hooks/use-hot-key';
 import { useSession } from '@/lib/auth-client';
 import { useStats } from '@/hooks/use-stats';
-import { XIcon } from '../icons/animated/x';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { getMail } from '@/actions/mail';
 import { SearchBar } from './search-bar';
+import { cn } from '@/lib/utils';
 import items from './demo.json';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
@@ -215,7 +205,7 @@ export function DemoMailLayout() {
 }
 
 export function MailLayout({ children }: { children: React.ReactNode }) {
-  const { folder } = useParams<{ folder: string }>();
+  const { folder, threadId } = useParams<{ folder: string; threadId: string }>();
   const [mail, setMail] = useMail();
   const [, clearBulkSelection] = useAtom(clearBulkSelectionAtom);
   const router = useRouter();
@@ -236,35 +226,11 @@ export function MailLayout({ children }: { children: React.ReactNode }) {
     }
   }, [session?.user, isPending]);
 
-  // const isDesktop = useMediaQuery('(min-width: 768px)');
-
-  const searchParams = useSearchParams();
-  const threadIdParam = searchParams.get('threadId');
-
-  // No need to track threadIdParam with a separate state
-
-  const handleClose = useCallback(() => {
-    // Update URL to remove threadId parameter
-    const currentParams = new URLSearchParams(searchParams.toString());
-    currentParams.delete('threadId');
-    router.push(`/mail/${folder}?${currentParams.toString()}`);
-  }, [router, folder, searchParams]);
-
-  // Search bar is always visible now, no need for keyboard shortcuts to toggle it
-  useHotKey('Esc', (event) => {
-    event?.preventDefault();
-    // Handle other Esc key functionality if needed
-  });
-
-  // const searchIconRef = useRef<any>(null);
-
   return (
     <TooltipProvider delayDuration={0}>
       <div className="rounded-inherit flex">
         <div className="rounded-inherit w-full gap-1.5 overflow-hidden">
-          <div
-            className={cn('border-none !bg-transparent', threadIdParam ? 'md:hidden lg:block' : '')}
-          >
+          <div className={cn('border-none !bg-transparent', threadId ? 'md:hidden lg:block' : '')}>
             <div className="bg-offsetLight dark:bg-offsetDark flex-1 flex-col overflow-y-auto shadow-inner md:flex md:rounded-2xl md:border md:shadow-sm">
               <div
                 className={cn('compose-gradient h-0.5 w-full transition-opacity', 'opacity-0')}
@@ -318,7 +284,7 @@ export function MailLayout({ children }: { children: React.ReactNode }) {
                     <div className="flex flex-1 justify-center">
                       <SearchBar />
                     </div>
-                    {!threadIdParam && (
+                    {!threadId && (
                       <div className="flex items-center">
                         <CategorySelect />
                       </div>
@@ -554,6 +520,8 @@ function CategorySelect() {
   const [, setSearchValue] = useSearchValue();
   const categories = Categories();
   const [defaultCategory, setDefaultCategory] = useState('Primary');
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Safely access localStorage on the client side only
   useEffect(() => {
@@ -583,6 +551,7 @@ function CategorySelect() {
             folder: '',
           };
           setSearchValue(searchValueState);
+          router.push(`?q=${category.searchValue}`);
 
           // Save to localStorage (safely on client-side)
           if (typeof window !== 'undefined') {

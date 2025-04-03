@@ -1,17 +1,24 @@
 import { SRThreadDisplay } from '@/components/mail/thread-display';
 import { getMail, getMails, markAsRead } from '@/actions/mail';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { MailList } from '@/components/mail/mail-list';
+import type { MailPageProps, ParsedMessage } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MailLayout } from '@/components/mail/mail';
 import { SRMailList } from '../list.server';
-import { MailPageProps } from '@/types';
 import { Suspense } from 'react';
 
 export default async function MailPage({ params, searchParams }: MailPageProps) {
   const { threadId, folder } = await params;
-  const { pageToken, q, max } = await searchParams;
-  const threadMessages = await getMail({ id: threadId });
+  const { pageToken, q, max, labelIds } = await searchParams;
+  const threadsResponse = await getMails({
+    folder,
+    q,
+    max,
+    pageToken,
+    labelIds,
+  });
+
+  let threadMessages: ParsedMessage[] = [];
+  if (threadId) threadMessages = (await getMail({ id: threadId })) ?? [];
   if (threadMessages && threadMessages.some((e) => e.unread)) void markAsRead({ ids: [threadId] });
 
   return (
@@ -40,10 +47,14 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
               </div>
             }
           >
-            <SRMailList pageToken={pageToken} max={max} q={q} folder={folder} />
+            <SRMailList
+              resultSizeEstimate={threadsResponse?.resultSizeEstimate}
+              threads={threadsResponse?.threads}
+              nextPageToken={threadsResponse?.nextPageToken}
+            />
           </Suspense>
         </div>
-        <div className="hidden md:block md:w-[67%] border-l">
+        <div className="hidden border-l md:block md:w-[67%]">
           <Suspense fallback={<p>Loading</p>}>
             <SRThreadDisplay messages={threadMessages ?? []} />
           </Suspense>

@@ -8,7 +8,7 @@ export interface IGetThreads {
   folder: string;
   q?: string;
   max?: number;
-  labelIds?: string[];
+  labelIds?: string;
   pageToken: string | number | undefined;
 }
 

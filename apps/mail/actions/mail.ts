@@ -9,7 +9,7 @@ export const getMails = async ({ folder, q, max, labelIds, pageToken }: IGetThre
 
   try {
     const driver = await getActiveDriver();
-    return await driver.list(folder, q, max, labelIds, pageToken);
+    return await driver.list(folder, q, max, undefined, pageToken);
   } catch (error) {
     if (FatalErrors.includes((error as Error).message)) await deleteActiveConnection();
     console.error('Error getting threads:', error);

@@ -1,8 +1,8 @@
 'use client';
 
 import { ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { AppSidebar } from '@/components/ui/app-sidebar';
 import { SidebarToggle } from '@/components/ui/sidebar-toggle';
+import { AppSidebar } from '@/components/ui/app-sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -10,9 +10,9 @@ export function SettingsLayoutContent({ children }: { children: React.ReactNode 
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full w-full">
       <AppSidebar className="hidden lg:flex" />
-      <div className="flex-1 bg-white dark:bg-black md:py-3 md:pr-2">
+      <div className="flex-1 bg-white md:py-3 md:pr-2 dark:bg-black">
         <ResizablePanelGroup
           direction="horizontal"
           autoSaveId="settings-panel-layout"
@@ -23,7 +23,7 @@ export function SettingsLayoutContent({ children }: { children: React.ReactNode 
             defaultSize={isMobile ? 100 : 35}
             minSize={isMobile ? 100 : 35}
           >
-            <div className="h-full md:shadow-s bg-offsetLight dark:bg-offsetDark flex flex-col overflow-y-auto shadow-inner md:rounded-2xl md:border">
+            <div className="md:shadow-s bg-offsetLight dark:bg-offsetDark flex h-full flex-col overflow-y-auto shadow-inner md:rounded-2xl md:border">
               <div className="sticky top-0 z-10 flex items-center justify-between gap-1.5 border-b p-2">
                 <SidebarToggle className="h-fit px-2" />
               </div>
