@@ -7,7 +7,7 @@ export default async function MainMailLayout({ children }: { children: React.Rea
     <MailLayout>
       <div className="flex h-[calc(100vh-4rem)]">
         <div className="w-full">
-          <Suspense
+          {/* <Suspense
             fallback={
               <div className="flex flex-col">
                 {[...Array(8)].map((_, i) => (
@@ -28,9 +28,9 @@ export default async function MainMailLayout({ children }: { children: React.Rea
                 ))}
               </div>
             }
-          >
-            {children}
-          </Suspense>
+          > */}
+          {children}
+          {/* </Suspense> */}
         </div>
       </div>
     </MailLayout>

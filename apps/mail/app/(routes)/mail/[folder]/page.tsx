@@ -39,34 +39,11 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       <div className={cn(threadId ? 'md:w-[33%]' : 'w-full')}>
-        <Suspense
-          fallback={
-            <div className="flex flex-col">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex flex-col px-4 py-3">
-                  <div className="flex w-full items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-24" />
-                    </div>
-                    <Skeleton className="h-3 w-12" />
-                  </div>
-                  <Skeleton className="mt-2 h-3 w-32" />
-                  <Skeleton className="mt-2 h-3 w-full" />
-                  <div className="mt-2 flex gap-2">
-                    <Skeleton className="h-4 w-16 rounded-md" />
-                    <Skeleton className="h-4 w-16 rounded-md" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          }
-        >
-          <SRMailList
-            resultSizeEstimate={threadsResponse?.resultSizeEstimate}
-            threads={threadsResponse?.threads}
-            nextPageToken={threadsResponse?.nextPageToken}
-          />
-        </Suspense>
+        <SRMailList
+          resultSizeEstimate={threadsResponse?.resultSizeEstimate}
+          threads={threadsResponse?.threads}
+          nextPageToken={threadsResponse?.nextPageToken}
+        />
       </div>
       {threadId ? (
         <div className="hidden border-l md:block md:w-[67%]">
