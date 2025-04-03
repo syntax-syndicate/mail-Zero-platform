@@ -266,7 +266,7 @@ export const driver = async (config: IConfig): Promise<MailManager> => {
     list: async (
       folder: string,
       q: string,
-      maxResults = 20,
+      maxResults = 40,
       _labelIds: string[] = [],
       pageToken?: string,
     ) => {
@@ -449,7 +449,7 @@ export const driver = async (config: IConfig): Promise<MailManager> => {
         throw error;
       }
     },
-    listDrafts: async (q?: string, maxResults = 20, pageToken?: string) => {
+    listDrafts: async (q?: string, maxResults = 40, pageToken?: string) => {
       const { q: normalizedQ } = normalizeSearch('', q ?? '');
       const res = await gmail.users.drafts.list({
         userId: 'me',

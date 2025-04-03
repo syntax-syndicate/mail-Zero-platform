@@ -386,9 +386,9 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
       >
         <div className="flex flex-shrink-0 items-center border-b px-1 pb-1 md:px-3 md:pb-2 md:pt-[10px]">
           <div className="flex flex-1 items-center gap-2">
-            <Link prefetch href={`/mail/${folder}`}>
+            <a href={`/mail/${folder}`}>
               <XIcon className="size-6" />
-            </Link>
+            </a>
             <ThreadSubject subject={emailData[0]?.subject} />
           </div>
           <div className="flex items-center md:gap-2">
