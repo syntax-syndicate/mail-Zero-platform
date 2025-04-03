@@ -19,7 +19,7 @@ export default async function MailPage({ params, searchParams }: MailPageProps) 
 
   let threadMessages: ParsedMessage[] = [];
   if (threadId) threadMessages = (await getMail({ id: threadId })) ?? [];
-  if (threadMessages && threadMessages.some((e) => e.unread)) void markAsRead({ ids: [threadId] });
+  if (threadMessages && threadMessages.some((e) => e.unread)) await markAsRead({ ids: [threadId] });
 
   return (
     <MailLayout>
