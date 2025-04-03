@@ -2,7 +2,7 @@
 import { DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArchiveX, Forward, ReplyAll, Star, StarOff } from 'lucide-react';
+import { ArchiveX, Forward, ReplyAll, Star, StarOff, X } from 'lucide-react';
 import { useSearchParams, useParams } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -599,9 +599,9 @@ export function SRThreadDisplay({ messages }: { messages: ParsedMessage[] }) {
         )}
       >
         <div className="flex flex-shrink-0 items-center border-b px-1 pb-1 md:px-3 md:pb-2 md:pt-[10px]">
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-1 items-center gap-2 ml-2 md:ml-0">
             <Link href={`/mail/${folder}`}>
-              <XIcon className="size-6" />
+              <X className="h-4 w-4" />
             </Link>
             <ThreadSubject subject={messages[0]?.subject} />
           </div>
