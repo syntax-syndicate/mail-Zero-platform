@@ -1,4 +1,4 @@
-import { generateCompletions } from '@/lib/groq';
+import { createEmbeddings, generateCompletions } from "./groq";
 
 interface AIResponse {
   id: string;
@@ -76,13 +76,44 @@ export async function generateEmailContent(
       .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
       .join('\n\n');
     
+    // Create embeddings for relevant context
+    const embeddingTexts: Record<string, string> = {};
+    
+    if (currentContent) {
+      embeddingTexts.currentEmail = currentContent;
+    }
+    
+    if (prompt) {
+      embeddingTexts.userPrompt = prompt;
+    }
+    
+    // Add previous messages for context
+    const previousMessages = conversationHistories[convId]
+      .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+      .slice(-4); // Get last 4 messages
+      
+    if (previousMessages.length > 0) {
+      embeddingTexts.conversationHistory = previousMessages
+        .map(msg => `${msg.role}: ${msg.content}`)
+        .join('\n\n');
+    }
+    
+    // Generate embeddings
+    let embeddings = {};
+    try {
+      embeddings = await createEmbeddings(embeddingTexts);
+    } catch (embeddingError) {
+      // Continue without embeddings if there's an error
+    }
+    
     // Make API call using the ai function
     const { completion } = await generateCompletions({
       model: 'gpt-4o-mini', // Using Groq's model
       systemPrompt,
       prompt: userMessages + '\n\nUser: ' + prompt,
       temperature: 0.7,
-      max_tokens: isQuestion ? 150 : 1000
+      max_tokens: isQuestion ? 150 : 1000,
+      embeddings // Pass the embeddings to the API call
     });
     
     const generatedContent = completion;
@@ -115,6 +146,46 @@ export async function generateEmailContent(
   }
 }
 
+export function stripHtmlTags(html: string): string {
+  if (!html) return '';
+  
+  // First, remove entire style tags and their content
+  let text = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  
+  // Remove script tags and their content
+  text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  
+  // Replace common HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  
+  // Remove all remaining HTML tags
+  text = text.replace(/<[^>]*>/g, '');
+  
+  // Remove multiple spaces and trim
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  // Fix common formatting issues after tag removal
+  text = text
+    .replace(/\s+\./g, '.') // Remove spaces before periods
+    .replace(/\s+,/g, ',')  // Remove spaces before commas
+    .replace(/\s+:/g, ':')  // Remove spaces before colons
+    .replace(/\s+;/g, ';')  // Remove spaces before semicolons
+    .replace(/\n{3,}/g, '\n\n'); // Replace multiple newlines with double newlines
+  
+  // Restore some basic formatting with newlines
+  text = text
+    .replace(/\. /g, '.\n') // Add newlines after periods
+    .replace(/\n{3,}/g, '\n\n'); // But don't allow too many consecutive newlines
+  
+  return text;
+}
+
 function formatEmailContent(content: string, prompt: string, recipients?: string[]): string {
   // Remove any "Subject:" line at the beginning
   let formattedContent = content
@@ -127,6 +198,9 @@ function formatEmailContent(content: string, prompt: string, recipients?: string
     .replace(/\n{3,}/g, '\n\n')
     .split('\n').map(line => line.trimRight()).join('\n')
     .trim();
+
+  // Fixed bug: was using formatEmailContent.toString() instead of formattedContent
+  formattedContent = stripHtmlTags(formattedContent).trim();
   
   return formattedContent;
 }

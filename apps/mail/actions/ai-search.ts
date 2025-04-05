@@ -49,20 +49,16 @@ Examples:
 
 Convert this query into a precise email search query: "${query}"`;
 
-    console.log('Enhancing search query:', query);
-   
     const { completion } = await generateCompletions({
         max_tokens: 100,
         temperature: 0.2,
         systemPrompt,
         model: "gpt-3.5-turbo"
-      })
+      });
 
-    const aiResponse = completion
-    console.log('AI Response:', aiResponse);
+    const aiResponse = completion;
     
     const enhancedQuery = aiResponse?.trim() || query;
-    console.log('Enhanced Query:', enhancedQuery);
 
     if (!enhancedQuery) {
       return {

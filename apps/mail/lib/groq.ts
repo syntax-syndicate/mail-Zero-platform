@@ -95,11 +95,6 @@ export async function createEmbedding(text: string, model: string = GROQ_MODELS.
     // Handle HTTP errors
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Groq Embedding API HTTP Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
-      });
       throw new Error(`Embedding API HTTP error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
@@ -108,7 +103,6 @@ export async function createEmbedding(text: string, model: string = GROQ_MODELS.
     try {
       data = await response.json();
     } catch (jsonError) {
-      console.error('Failed to parse JSON response:', jsonError);
       throw new Error(`Failed to parse embedding API response: ${jsonError}`);
     }
 
@@ -118,16 +112,12 @@ export async function createEmbedding(text: string, model: string = GROQ_MODELS.
       
       // Check if we have embedding data
       if (!validatedData.data || validatedData.data.length === 0) {
-        console.error('No embedding data returned:', validatedData);
         throw new Error('No embedding data returned from API');
       }
       
       // Return the embedding
       return validatedData.data[0]?.embedding || [];
     } catch (validationError) {
-      console.error('Embedding response validation error:', validationError);
-      console.error('Raw response data:', data);
-      
       throw new Error(`Invalid embedding API response: ${validationError}`);
     }
   } catch (error) {
@@ -243,15 +233,6 @@ export async function generateCompletions({
     };
   }
 
-  // Log the request for debugging
-  console.log('Groq API Request:', {
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    originalModel: model,
-    mappedModel: groqModel,
-    messageCount: messages.length,
-    hasEmbeddings: !!embeddings
-  });
-
   try {
     // Use regular fetch for more control over the request
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -265,11 +246,6 @@ export async function generateCompletions({
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Groq API Error Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
-      });
       throw new Error(`GROQ API Error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
@@ -287,7 +263,6 @@ export async function generateCompletions({
       
       return { completion: content };
     } catch (validationError) {
-      console.error('Response validation error:', validationError);
       // Fall back to using the raw response if validation fails
       let content = data.choices[0]?.message.content || '';
       
