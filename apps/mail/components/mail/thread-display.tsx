@@ -1,11 +1,24 @@
+import {
+  Archive,
+  ArchiveX,
+  Expand,
+  Forward,
+  Mail,
+  MoreVertical,
+  Reply,
+  ReplyAll,
+  Star,
+  StarOff,
+  X,
+} from 'lucide-react';
 import { DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Archive, ArchiveX, Expand, Forward, MoreVertical, Reply, ReplyAll, Star, StarOff, X } from 'lucide-react';
 import { useSearchParams, useParams } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { moveThreadsTo, ThreadDestination } from '@/lib/thread-actions';
+import { markAsUnread } from '@/actions/mail';
 import { MoreVerticalIcon } from '../icons/animated/more-vertical';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useThread, useThreads } from '@/hooks/use-threads';
@@ -23,17 +36,21 @@ import { useTranslations } from 'next-intl';
 import { NotesPanel } from './note-panel';
 import { cn, FOLDERS } from '@/lib/utils';
 import MailDisplay from './mail-display';
+import { ParsedMessage } from '@/types';
 import { Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useMail } from '../mail/use-mail';
 
 interface ThreadDisplayProps {
-  mail?: any;
+  threadParam?: any;
   onClose?: () => void;
   isMobile?: boolean;
+  messages?: ParsedMessage[];
+  id?: string;
 }
 
-export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
+export function ThreadDemo({ messages, isMobile }: ThreadDisplayProps) {
   const isFullscreen = false;
 
   return (
@@ -53,7 +70,7 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
       >
         <div className="flex flex-shrink-0 items-center border-b p-2">
           <div className="flex flex-1 items-center gap-2">
-            <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
+            <Button variant="ghost" className="md:h-fit md:px-2" disabled={!messages}>
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
             </Button>
@@ -63,7 +80,7 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!messages}>
                   {isFullscreen ? (
                     <ExpandIcon className="h-4 w-4" />
                   ) : (
@@ -80,7 +97,7 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!messages}>
                   <ArchiveIcon className="relative top-0.5 h-4 w-4" />
                   <span className="sr-only">Archive</span>
                 </Button>
@@ -89,7 +106,7 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!messages}>
                   <ReplyIcon className="h-4 w-4" />
                   <span className="sr-only">Reply</span>
                 </Button>
@@ -98,7 +115,7 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!messages}>
                   <MoreVerticalIcon className="h-4 w-4" />
                   <span className="sr-only">More</span>
                 </Button>
@@ -117,7 +134,7 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ScrollArea className="flex-1" type="scroll">
             <div className="pb-4">
-              {[...(emailData || [])].reverse().map((message, index) => (
+              {[...(messages || [])].reverse().map((message, index) => (
                 <div
                   key={message.id}
                   className={cn(
@@ -138,7 +155,9 @@ export function ThreadDemo({ mail: emailData, isMobile }: ThreadDisplayProps) {
             </div>
           </ScrollArea>
           <div className="relative flex-shrink-0 md:top-2">
-            <ReplyCompose emailData={emailData} isOpen={false} setIsOpen={() => {}} />
+            {messages ? (
+              <ReplyCompose emailData={messages} isOpen={false} setIsOpen={() => {}} />
+            ) : null}
           </div>
         </div>
       </div>
@@ -179,8 +198,8 @@ function ThreadActionButton({
   );
 }
 
-export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
-  const { data: emailData, isLoading, mutate: mutateThread } = useThread();
+export function ThreadDisplay({ threadParam, onClose, isMobile, id }: ThreadDisplayProps) {
+  const { data: emailData, isLoading } = useThread(id ?? null);
   const { mutate: mutateThreads } = useThreads();
   const searchParams = useSearchParams();
   const [isMuted, setIsMuted] = useState(false);
@@ -191,7 +210,8 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
   const { mutate: mutateStats } = useStats();
   const { folder } = useParams<{ folder: string }>();
   const threadIdParam = searchParams.get('threadId');
-  const threadId = mail ?? threadIdParam ?? '';
+  const threadId = threadParam ?? threadIdParam ?? '';
+  const [, setMailState] = useMail();
 
   const moreVerticalIconRef = useRef<any>(null);
 
@@ -205,27 +225,51 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
 
   const moveThreadTo = useCallback(
     async (destination: ThreadDestination) => {
-      await moveThreadsTo({
-        threadIds: [threadId],
-        currentFolder: folder,
-        destination,
-      }).then(async () => {
-        await Promise.all([mutateThread(), mutateStats()]);
+      const promise = async () => {
+        await moveThreadsTo({
+          threadIds: [threadId],
+          currentFolder: folder,
+          destination,
+        });
+        await Promise.all([mutateStats(), mutateThreads()]);
         handleClose();
+      };
+
+      toast.promise(promise(), {
+        loading: t('common.actions.moving'),
+        success: destination === 'inbox' 
+          ? t('common.actions.movedToInbox') 
+          : destination === 'spam'
+          ? t('common.actions.movedToSpam')
+          : t('common.actions.archived'),
+        error: t('common.actions.failedToMove'),
       });
     },
-    [threadId, folder, mutateThread, mutateStats, handleClose],
+    [threadId, folder, mutateStats, mutateThreads, handleClose, t],
   );
 
-  useEffect(() => {
-    if (emailData?.[0]) {
-      setIsMuted(emailData[0].unread ?? false);
-    }
-  }, [emailData]);
+  const handleMarkAsUnread = useCallback(async () => {
+    if (!emailData || !threadId) return;
+    
+    const promise = async () => {
+      const result = await markAsUnread({ ids: [threadId] });
+      if (!result.success) throw new Error('Failed to mark as unread');
+      
+      setMailState(prev => ({ ...prev, bulkSelected: [] }));
+      await Promise.all([mutateStats(), mutateThreads()]);
+      handleClose();
+    };
+
+    toast.promise(promise(), {
+      loading: t('common.actions.markingAsUnread'),
+      success: t('common.mail.markedAsUnread'),
+      error: t('common.mail.failedToMarkAsUnread'),
+    });
+  }, [emailData, threadId, mutateStats, mutateThreads, t, handleClose, setMailState]);
 
   const handleFavourites = async () => {
     if (!emailData || !threadId) return;
-    const done = Promise.all([mutateThread(), mutateThreads()]);
+    const done = Promise.all([mutateThreads()]);
     if (emailData[0]?.tags?.includes('STARRED')) {
       toast.promise(
         modifyLabels({ threadId: [threadId], removeLabels: ['STARRED'] }).then(() => done),
@@ -261,7 +305,7 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [handleClose]);
 
-  if (isLoading || !emailData)
+  if (!emailData || isLoading)
     return (
       <div
         className={cn(
@@ -334,12 +378,6 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
                   <DropdownMenuItem>
                     <ReplyAll className="mr-2 h-4 w-4" /> {t('common.threadDisplay.replyAll')}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleForward}>
-                    <Forward className="mr-2 h-4 w-4" /> {t('common.threadDisplay.forward')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>{t('common.threadDisplay.markAsUnread')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('common.threadDisplay.addLabel')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('common.threadDisplay.muteThread')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -372,15 +410,15 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
       >
         <div className="flex flex-shrink-0 items-center border-b px-1 pb-1 md:px-3 md:pb-2 md:pt-[10px]">
           <div className="flex flex-1 items-center gap-2">
-            <Link href={`/mail/${folder}`}>
-              <Button variant="ghost" className="md:h-fit md:px-2">
-                <X className="h-4 w-4 hover:text-red-500" />
-              </Button>
-            </Link>
+            <ThreadActionButton
+              icon={XIcon}
+              label={t('common.actions.close')}
+              onClick={handleClose}
+            />
             <ThreadSubject subject={emailData[0]?.subject} />
           </div>
           <div className="flex items-center md:gap-2">
-            {/* <NotesPanel threadId={mail} /> */}
+            <NotesPanel threadId={threadId} />
             <ThreadActionButton
               icon={Expand}
               label={
@@ -391,11 +429,34 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
               disabled={!emailData}
               onClick={() => setIsFullscreen(!isFullscreen)}
             />
+            {(isInSpam || isInArchive) ? (
+              <ThreadActionButton
+                icon={Inbox}
+                label={t('common.mail.moveToInbox')}
+                disabled={!emailData}
+                onClick={() => moveThreadTo('inbox')}
+              />
+            ) : (
+              <>
+                <ThreadActionButton
+                  icon={Archive}
+                  label={t('common.threadDisplay.archive')}
+                  disabled={!emailData}
+                  onClick={() => moveThreadTo('archive')}
+                />
+                <ThreadActionButton
+                  icon={ArchiveX}
+                  label={t('common.threadDisplay.moveToSpam')}
+                  disabled={!emailData}
+                  onClick={() => moveThreadTo('spam')}
+                />
+              </>
+            )}
             <ThreadActionButton
-              icon={Archive}
-              label={t('common.threadDisplay.archive')}
-              disabled={!emailData || (!isInInbox && !isInSpam)}
-              onClick={() => moveThreadTo('archive')}
+              icon={Mail}
+              label={t('common.mail.markAsUnread')}
+              disabled={!emailData}
+              onClick={handleMarkAsUnread}
             />
             <ThreadActionButton
               icon={Reply}
@@ -403,7 +464,7 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
               disabled={!emailData}
               onClick={() => setIsReplyOpen(true)}
             />
-            <DropdownMenu>
+            {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -438,17 +499,19 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
                 <DropdownMenuItem onClick={handleForward}>
                   <Forward className="mr-2 h-4 w-4" /> {t('common.threadDisplay.forward')}
                 </DropdownMenuItem>
-                <DropdownMenuItem>{t('common.threadDisplay.markAsUnread')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleMarkAsUnread}>
+                  <Mail className="mr-2 h-4 w-4" /> {t('common.mail.markAsUnread')}
+                </DropdownMenuItem>
                 <DropdownMenuItem>{t('common.threadDisplay.addLabel')}</DropdownMenuItem>
                 <DropdownMenuItem>{t('common.threadDisplay.muteThread')}</DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
           </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ScrollArea className="h-full flex-1" type="auto">
             <div className="pb-4">
-              {[...(emailData || [])].reverse().map((message, index) => (
+              {(emailData || []).map((message, index) => (
                 <div
                   key={message.id}
                   className={cn(
@@ -460,8 +523,9 @@ export function ThreadDisplay({ mail, onClose, isMobile }: ThreadDisplayProps) {
                     emailData={message}
                     isFullscreen={isFullscreen}
                     isMuted={isMuted}
-                    isLoading={isLoading}
+                    isLoading={false}
                     index={index}
+                    totalEmails={emailData.length}
                   />
                 </div>
               ))}
