@@ -1,3 +1,4 @@
+import { extractTextFromHTML } from "@/actions/extractText";
 import { createEmbeddings, generateCompletions } from "./groq";
 
 interface AIResponse {
@@ -131,7 +132,7 @@ export async function generateEmailContent(
       }];
     } else {
       // Format email content
-      const formattedContent = formatEmailContent(generatedContent, prompt, recipients);
+      const formattedContent = await formatEmailContent(generatedContent, prompt, recipients);
       
       return [{
         id: "email-" + Date.now(),
@@ -146,47 +147,7 @@ export async function generateEmailContent(
   }
 }
 
-export function stripHtmlTags(html: string): string {
-  if (!html) return '';
-  
-  // First, remove entire style tags and their content
-  let text = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-  
-  // Remove script tags and their content
-  text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  
-  // Replace common HTML entities
-  text = text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-  
-  // Remove all remaining HTML tags
-  text = text.replace(/<[^>]*>/g, '');
-  
-  // Remove multiple spaces and trim
-  text = text.replace(/\s+/g, ' ').trim();
-  
-  // Fix common formatting issues after tag removal
-  text = text
-    .replace(/\s+\./g, '.') // Remove spaces before periods
-    .replace(/\s+,/g, ',')  // Remove spaces before commas
-    .replace(/\s+:/g, ':')  // Remove spaces before colons
-    .replace(/\s+;/g, ';')  // Remove spaces before semicolons
-    .replace(/\n{3,}/g, '\n\n'); // Replace multiple newlines with double newlines
-  
-  // Restore some basic formatting with newlines
-  text = text
-    .replace(/\. /g, '.\n') // Add newlines after periods
-    .replace(/\n{3,}/g, '\n\n'); // But don't allow too many consecutive newlines
-  
-  return text;
-}
-
-function formatEmailContent(content: string, prompt: string, recipients?: string[]): string {
+async function formatEmailContent(content: string, prompt: string, recipients?: string[]): Promise<string> {
   // Remove any "Subject:" line at the beginning
   let formattedContent = content
     .replace(/^Subject:.*?(\n|$)/i, '')
@@ -200,7 +161,7 @@ function formatEmailContent(content: string, prompt: string, recipients?: string
     .trim();
 
   // Fixed bug: was using formatEmailContent.toString() instead of formattedContent
-  formattedContent = stripHtmlTags(formattedContent).trim();
+  formattedContent = (await extractTextFromHTML(formattedContent)).trim()
   
   return formattedContent;
 }

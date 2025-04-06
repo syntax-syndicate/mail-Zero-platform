@@ -3,12 +3,12 @@
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { generateCompletions, truncateThreadContent } from '@/lib/groq';
-import { stripHtmlTags } from '@/lib/ai';
+import { extractTextFromHTML } from './extractText';
 
 // Extracts the most important parts of an email thread to fit within token limits
-function extractEmailSummary(threadContent: string, maxTokens: number = 4000): string {
+async function extractEmailSummary(threadContent: string, maxTokens: number = 4000): Promise<string> {
   // First, strip HTML from the thread content
-  threadContent = stripHtmlTags(threadContent);
+  threadContent = await extractTextFromHTML(threadContent);
   
   // Split the thread into individual emails
   const emails = threadContent.split('\n---\n');
