@@ -178,29 +178,18 @@ export async function generateCompletions({
 
   // Map OpenAI model names to Groq equivalents if needed
   const groqModel = MODEL_MAPPING[model] || model;
-
-  // Create a more specific system prompt to avoid templates and placeholders
-  let finalSystemPrompt = systemPrompt || process.env.AI_SYSTEM_PROMPT || '';
-  
-  // Add instructions to avoid templates and placeholders
-  finalSystemPrompt += `\n\nIMPORTANT INSTRUCTIONS:
-- Generate a real, ready-to-send email, not a template
-- Do not include placeholders like [Recipient], [discount percentage], etc.
-- Do not include formatting instructions or explanations
-- Do not include "Subject:" lines
-- Do not include "Here's a draft..." or similar meta-text
-- Write as if this email is ready to be sent immediately
-- Use real, specific content instead of placeholders
-- Address the recipient directly without using [brackets]
-- If you need to include a call-to-action, make it specific (e.g., "Visit our website at example.com" instead of "[Insert CTA button]")`;
-
   // Ensure we have valid messages
   const messages = [];
   
-  if (finalSystemPrompt && finalSystemPrompt.trim() !== '') {
+  if (systemPrompt) {
     messages.push({
       role: 'system',
-      content: finalSystemPrompt
+      content: systemPrompt,
+    });
+  } else if (process.env.AI_SYSTEM_PROMPT) {
+    messages.push({
+      role: 'system',
+      content: process.env.AI_SYSTEM_PROMPT,
     });
   }
 
@@ -213,7 +202,7 @@ export async function generateCompletions({
     // If no prompt is provided, add a minimal prompt to avoid API errors
     messages.push({
       role: 'user',
-      content: 'Please write an email.'
+      content: 'Please respond to this request.'
     });
   }
 
@@ -225,23 +214,21 @@ export async function generateCompletions({
     max_tokens,
   };
 
-  // Add embeddings if provided - using type assertion to avoid TypeScript errors
+  // Add embeddings if provided
   if (embeddings && Object.keys(embeddings).length > 0) {
-    // Add as a custom property
     (requestBody as any).user_context = {
       embeddings
     };
   }
 
   try {
-    // Use regular fetch for more control over the request
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
-      body: JSON.stringify(requestBody) // Explicitly stringify the request body
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -251,25 +238,22 @@ export async function generateCompletions({
 
     const data = await response.json();
     
-    // Validate the response against our schema
     try {
       const validatedData = groqChatCompletionSchema.parse(data);
+      const content = validatedData.choices[0]?.message.content || '';
       
-      // Clean up the response to remove any remaining template-like content
-      let content = validatedData.choices[0]?.message.content || '';
+      // Only apply email-specific cleanup if the system prompt suggests email generation
+      const isEmailGeneration = systemPrompt?.toLowerCase().includes('email') || false;
+      const finalContent = isEmailGeneration ? cleanupEmailContent(content) : content;
       
-      // Clean up the content
-      content = cleanupEmailContent(content);
-      
-      return { completion: content };
+      return { completion: finalContent };
     } catch (validationError) {
       // Fall back to using the raw response if validation fails
-      let content = data.choices[0]?.message.content || '';
+      const content = data.choices[0]?.message.content || '';
+      const isEmailGeneration = systemPrompt?.toLowerCase().includes('email') || false;
+      const finalContent = isEmailGeneration ? cleanupEmailContent(content) : content;
       
-      // Apply the same cleanup to the raw response
-      content = cleanupEmailContent(content);
-      
-      return { completion: content };
+      return { completion: finalContent };
     }
   } catch (error) {
     console.error('Groq API Call Error:', error);

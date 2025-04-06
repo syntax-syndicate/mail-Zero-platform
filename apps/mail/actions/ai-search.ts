@@ -10,7 +10,10 @@ export async function enhanceSearchQuery(query: string) {
     const headersList = await headers();
     const session = await auth.api.getSession({ headers: headersList });
 
+    console.log("Auth session:", session ? "Exists" : "Missing");
+
     if (!session?.user) {
+      console.log("Authentication failed: No user session");
       return {
         enhancedQuery: query,
         error: 'Unauthorized'
@@ -18,6 +21,7 @@ export async function enhanceSearchQuery(query: string) {
     }
 
     if (!query) {
+      console.log("Empty query received");
       return {
         enhancedQuery: '',
         error: 'Query is required'
@@ -25,11 +29,14 @@ export async function enhanceSearchQuery(query: string) {
     }
 
     if (!process.env.GROQ_API_KEY) {
+      console.log("Missing GROQ API key in environment variables");
       return {
         enhancedQuery: query,
         error: 'GROQ API key is not configured'
       };
     }
+
+    console.log("Original query:", query);
 
     const systemPrompt = `You are an email search query enhancer. Your job is to convert natural language queries into precise email search queries.
 
@@ -49,23 +56,30 @@ Examples:
 
 Convert this query into a precise email search query: "${query}"`;
 
+    console.log("Calling GROQ API with system prompt");
+    
     const { completion } = await generateCompletions({
         max_tokens: 100,
         temperature: 0.2,
         systemPrompt,
         model: "gpt-3.5-turbo"
-      });
+    });
+
+    console.log("GROQ API response:", completion);
 
     const aiResponse = completion;
     
     const enhancedQuery = aiResponse?.trim() || query;
 
     if (!enhancedQuery) {
+      console.log("Failed to get meaningful response from GROQ");
       return {
         enhancedQuery: query,
         error: 'Failed to generate search query'
       };
     }
+
+    console.log("Enhanced query:", enhancedQuery);
 
     return {
       enhancedQuery,
