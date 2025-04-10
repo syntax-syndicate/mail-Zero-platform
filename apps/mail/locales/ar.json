@@ -162,8 +162,8 @@
       "addLabel": "Add label",
       "muteThread": "Mute thread",
       "favourites": "Favourites",
-      "disableImages": "Hide Images",
-      "enableImages": "Show Images"
+      "disableImages": "إخفاء الصور",
+      "enableImages": "عرض الصور"
     },
     "notes": {
       "title": "Notes",
@@ -247,8 +247,8 @@
       "moveToInbox": "Move to Inbox",
       "unarchive": "Unarchive",
       "archive": "Archive",
-      "moveToBin": "Move to Bin",
-      "restoreFromBin": "Restore from Bin",
+      "moveToBin": "نقل إلى سلة المُهملات",
+      "restoreFromBin": "استعادة من سلة المُهملات",
       "markAsUnread": "Mark as Unread",
       "markAsRead": "Mark as Read",
       "addFavorite": "Favorite",
@@ -266,7 +266,7 @@
       "loadMore": "Load more"
     },
     "units": {
-      "mb": "{amount} MB"
+      "mb": "{amount} ميغابايت"
     }
   },
   "navigation": {
@@ -285,7 +285,7 @@
       "connections": "Connections",
       "security": "Security",
       "appearance": "Appearance",
-      "signatures": "Signatures",
+      "signatures": "التوقيعات",
       "shortcuts": "Shortcuts"
     }
   },
@@ -310,8 +310,8 @@
         "dynamicContentDescription": "Allow emails to display dynamic content.",
         "externalImages": "Display External Images",
         "externalImagesDescription": "Allow emails to display images from external sources.",
-        "trustedSenders": "Trusted Senders",
-        "trustedSendersDescription": "Always display images for these senders.",
+        "trustedSenders": "المرسلون الموثوق بهم",
+        "trustedSendersDescription": "عرض الصور دائما لهؤلاء المرسلين.",
         "languageChangedTo": "Language changed to {locale}",
         "customPrompt": "Custom AI Prompt",
         "customPromptPlaceholder": "Enter your custom prompt for the AI...",
@@ -339,8 +339,8 @@
         "loginNotifications": "Login Notifications",
         "loginNotificationsDescription": "Get notified about new login attempts",
         "deleteAccount": "Delete Account",
-        "loadImagesDefault": "Load Images by Default",
-        "loadImagesDefaultDescription": "Images are not loaded by default for security reasons."
+        "loadImagesDefault": "تحميل الصور بشكل افتراضي",
+        "loadImagesDefaultDescription": "لم يتم تحميل الصور بشكل افتراضي لأسباب أمنية."
       },
       "appearance": {
         "title": "Appearance",
@@ -349,7 +349,7 @@
         "inboxType": "Inbox Type"
       },
       "signatures": {
-        "title": "Email Signatures",
+        "title": "توقيعات البريد الإلكتروني",
         "description": "Create and manage your email signature that appears at the bottom of your messages.",
         "enableSignature": "Enable signature",
         "enableSignatureDescription": "Add your signature to the end of all outgoing messages.",
