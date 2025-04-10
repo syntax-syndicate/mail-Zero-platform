@@ -14,10 +14,10 @@
       "refresh": "Atjaunot",
       "loading": "Ielādē...",
       "featureNotImplemented": "This feature is not implemented yet",
-      "moving": "Moving...",
+      "moving": "Pārvieto...",
       "movedToInbox": "Moved to inbox",
       "movingToInbox": "Moving to inbox...",
-      "movedToSpam": "Moved to spam",
+      "movedToSpam": "Pārvietots uz mēstulēm",
       "movingToSpam": "Moving to spam...",
       "archiving": "Archiving...",
       "archived": "Archived",
@@ -35,12 +35,12 @@
       "markingAsRead": "Marking as read...",
       "markingAsUnread": "Marking as unread...",
       "hiddenImagesWarning": "Images are hidden by default for security reasons.",
-      "showImages": "Show Images",
-      "disableImages": "Hide Images",
+      "showImages": "Rādīt attēlus",
+      "disableImages": "Nerādīt attēlus",
       "trustSender": "Trust Sender",
-      "cancel": "Cancel",
-      "save": "Save",
-      "remove": "Remove"
+      "cancel": "Atcelt",
+      "save": "Saglabāt",
+      "remove": "Noņemt"
     },
     "themes": {
       "dark": "Tumšs",
@@ -162,8 +162,8 @@
       "addLabel": "Pievienot iezīmi",
       "muteThread": "Apklusināt pavedienu",
       "favourites": "Izlase",
-      "disableImages": "Hide Images",
-      "enableImages": "Show Images"
+      "disableImages": "Nerādīt attēlus",
+      "enableImages": "Rādīt attēlus"
     },
     "notes": {
       "title": "Piezīmes",
@@ -285,7 +285,7 @@
       "connections": "Savienojumi",
       "security": "Drošība",
       "appearance": "Izskats",
-      "signatures": "Signatures",
+      "signatures": "Paraksti",
       "shortcuts": "Īsceļi"
     }
   },
@@ -400,20 +400,20 @@
       "body": "Saturs",
       "example": "zero@0.email",
       "attachments": "Attachments ({count})",
-      "addMore": "Add more",
+      "addMore": "Pievienot vēl",
       "dropFilesToAttach": "Ievelciet failus, lai pievienotu",
       "writeYourMessageHere": "Raksti savu ziņu šeit...",
       "emailSentSuccessfully": "E-pasts veiksmīgi nosūtīts",
       "failedToSendEmail": "Neizdevās nosūtīt e-pastu. Lūdzu, mēģiniet vēlreiz.",
       "signature": {
-        "title": "Signature",
+        "title": "Paraksts",
         "include": "Include signature",
         "remove": "Remove signature",
         "enable": "Enable signature",
         "disable": "Disable signature",
         "add": "Add signature"
       },
-      "addLink": "Add Link",
+      "addLink": "Pievienot saiti",
       "addUrlToCreateALink": "Add URL to create a link. The link will open in a new tab.",
       "editor": {
         "menuBar": {
