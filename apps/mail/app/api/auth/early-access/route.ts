@@ -3,6 +3,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { earlyAccess } from '@zero/db/schema';
 import { redis } from '@/lib/redis';
 import { db } from '@zero/db';
+import { Resend } from 'resend';
 
 type PostgresError = {
   code: string;
@@ -60,7 +61,9 @@ export async function POST(req: NextRequest) {
 
     console.log('Request body:', body);
 
-    const { email } = body;
+    const { email: rawEmail } = body as { email: string };
+
+    const email = rawEmail.trim().toLowerCase();
 
     if (!email) {
       console.log('Email missing from request');
@@ -82,6 +85,18 @@ export async function POST(req: NextRequest) {
         email,
         createdAt: nowDate,
         updatedAt: nowDate,
+      });
+
+      const resend = process.env.RESEND_API_KEY
+        ? new Resend(process.env.RESEND_API_KEY)
+        : { emails: { send: async (...args: any[]) => console.log(args) } };
+
+      await resend.emails.send({
+        from: '0.email <onboarding@0.email>',
+        to: email,
+        subject: 'You <> Zero',
+        text: `Congrats on joining the waitlist! We're excited to have you on board. Please expect an email from us soon with more information, we are inviting more batches of early access users every day. If you have any questions, please don't hesitate to reach out to us on Discord https://discord.gg/0email.`,
+        scheduledAt: new Date(Date.now() + (1000 * 60 * 60 * 24)).toISOString(),
       });
 
       console.log('Insert successful:', result);

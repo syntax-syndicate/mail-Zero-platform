@@ -56,37 +56,43 @@ interface ActivityData {
   pullRequests: number;
 }
 
-const excludedUsernames = ['bot1', 'dependabot', 'github-actions'];
+const excludedUsernames = ['bot1', 'dependabot', 'github-actions', 'zerodotemail', 'autofix-ci[bot]'];
 const coreTeamMembers = ['nizzyabi', 'ahmetskilinc', 'ripgrim', 'needlexo', 'praashh', 'mrgsub'];
 const REPOSITORY = 'Mail-0/Zero';
 
-const specialRoles: Record<string, { role: string; twitter?: string; website?: string }> = {
+const specialRoles: Record<string, { role: string; position: number; x?: string; website?: string }> = {
   nizzyabi: {
-    role: 'Project Owner',
-    twitter: 'nizzyabi',
+    role: 'Founder & CEO',
+    position: 1,
+    x: 'nizzyabi',
+  },
+  mrgsub: {
+    role: 'Founder & CTO',
+    position: 2,
+    x: 'cmdhaus',
   },
   ahmetskilinc: {
-    role: 'Maintainer',
-    twitter: 'bruvimtired',
+    role: 'Lead Engineer',
+    position: 3,
+    x: 'bruvimtired',
     website: 'https://ahmetk.dev/',
+  },
+  needlexo: {
+    role: 'Software Engineer',
+    position: 4,
+    x: 'needleXO',
+    website: 'https://needle.rip',
   },
   ripgrim: {
     role: 'Maintainer',
-    twitter: 'fuckgrimlabs',
+    position: 5,
+    x: 'fuckgrimlabs',
     website: 'https://ripgrim.com',
-  },
-  needlexo: {
-    role: 'Maintainer',
-    twitter: 'needleXO',
-    website: 'https://needle.rip',
   },
   praashh: {
     role: 'Maintainer',
-    twitter: '10Xpraash',
-  },
-  mrgsub: {
-    role: 'Project Owner',
-    twitter: 'cmdhaus',
+    position: 6,
+    x: '10Xpraash',
   },
 };
 
@@ -165,8 +171,8 @@ export default function OpenPage() {
   );
 
   const filteredCoreTeam = useMemo(
-    () =>
-      allContributors
+    () => {
+      return allContributors
         ?.filter(
           (contributor) =>
             !excludedUsernames.includes(contributor.login) &&
@@ -174,7 +180,12 @@ export default function OpenPage() {
               (member) => member.toLowerCase() === contributor.login.toLowerCase(),
             ),
         )
-        .sort((a, b) => b.contributions - a.contributions),
+        .sort((a, b) => {
+          const positionA = specialRoles[a.login.toLowerCase()]?.position || 999;
+          const positionB = specialRoles[b.login.toLowerCase()]?.position || 999;
+          return positionA - positionB;
+        });
+    },
     [allContributors],
   );
 
@@ -649,7 +660,7 @@ export default function OpenPage() {
                   transform: 'translateY(10px)',
                 }}
               >
-                <Avatar className="h-16 w-16 rounded-full ring-2 ring-neutral-200 transition-transform group-hover:scale-105 group-hover:ring-neutral-300 dark:ring-neutral-800 dark:group-hover:ring-neutral-700">
+                <Avatar className="h-16 w-16 ring-2 ring-neutral-200 transition-transform group-hover:scale-105 group-hover:ring-neutral-300 dark:ring-neutral-800 dark:group-hover:ring-neutral-700">
                   <AvatarImage
                     src={`https://github.com/${member.login}.png`}
                     alt={member.login}
@@ -675,9 +686,9 @@ export default function OpenPage() {
                     >
                       <Github className="h-4 w-4" />
                     </Link>
-                    {specialRoles[member.login.toLowerCase()]?.twitter && (
+                    {specialRoles[member.login.toLowerCase()]?.x && (
                       <Link
-                        href={`https://twitter.com/${specialRoles[member.login.toLowerCase()]?.twitter}`}
+                        href={`https://x.com/${specialRoles[member.login.toLowerCase()]?.x}`}
                         target="_blank"
                         className="rounded-md p-1 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
                       >
@@ -773,7 +784,7 @@ export default function OpenPage() {
                         transform: 'translateY(10px)',
                       }}
                     >
-                      <Avatar className="h-16 w-16 rounded-full ring-2 ring-neutral-200 transition-transform group-hover:scale-105 group-hover:ring-neutral-300 dark:ring-neutral-800 dark:group-hover:ring-neutral-700">
+                      <Avatar className="h-16 w-16 ring-2 ring-neutral-200 transition-transform group-hover:scale-105 group-hover:ring-neutral-300 dark:ring-neutral-800 dark:group-hover:ring-neutral-700">
                         <AvatarImage
                           src={contributor.avatar_url}
                           alt={contributor.login}
@@ -825,7 +836,7 @@ export default function OpenPage() {
                           return (
                             <g transform={`translate(${x},${y})`}>
                               <foreignObject x="-12" y="8" width="24" height="24">
-                                <Avatar className="h-6 w-6 rounded-full ring-1 ring-neutral-200 dark:ring-neutral-800">
+                                <Avatar className="h-6 w-6  ring-1 ring-neutral-200 dark:ring-neutral-800">
                                   <AvatarImage src={contributor?.avatar_url} />
                                   <AvatarFallback className="text-[8px]">
                                     {payload.value.slice(0, 2).toUpperCase()}

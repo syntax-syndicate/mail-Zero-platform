@@ -1,5 +1,6 @@
 'use server';
 import { deleteActiveConnection, FatalErrors, getActiveDriver } from './utils';
+import { ParsedMessage } from '@/types';
 
 export const getMails = async ({
   folder,
@@ -107,7 +108,49 @@ export const modifyLabels = async ({
     return { success: false, error: 'No label changes specified' };
   } catch (error) {
     if (FatalErrors.includes((error as Error).message)) await deleteActiveConnection();
-    console.error('Server: Error updating thread labels:', error);
+    console.error('Error updating thread labels:', error);
+    throw error;
+  }
+};
+
+export const toggleStar = async ({ ids }: { ids: string[] }) => {
+  try {
+    const driver = await getActiveDriver();
+    const { threadIds } = driver.normalizeIds(ids);
+
+    if (!threadIds.length) {
+      return { success: false, error: 'No thread IDs provided' };
+    }
+
+    const threadResults = await Promise.allSettled(
+      threadIds.map(id => driver.get(id))
+    );
+
+    let anyStarred = false;
+    let processedThreads = 0;
+
+    for (const result of threadResults) {
+      if (result.status === 'fulfilled' && result.value && result.value.length > 0) {
+        processedThreads++;
+        const isThreadStarred = result.value.some((message: ParsedMessage) => message.tags?.includes('STARRED'));
+        if (isThreadStarred) {
+          anyStarred = true;
+          break;
+        }
+      }
+    }
+
+    const shouldStar = processedThreads > 0 && !anyStarred;
+
+    await driver.modifyLabels(threadIds, {
+      addLabels: shouldStar ? ['STARRED'] : [],
+      removeLabels: shouldStar ? [] : ['STARRED'],
+    });
+
+    return { success: true };
+  } catch (error) {
+    if (FatalErrors.includes((error as Error).message)) await deleteActiveConnection();
+    console.error('Error toggling star:', error);
     throw error;
   }
 };

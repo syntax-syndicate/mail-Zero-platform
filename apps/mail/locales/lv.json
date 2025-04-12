@@ -10,7 +10,37 @@
       "close": "Aizvērt",
       "signingOut": "Izrakstīšanās...",
       "signedOutSuccess": "Veiksmīgi izrakstījies!",
-      "signOutError": "Kļūda, izrakstoties no sistēmas"
+      "signOutError": "Kļūda, izrakstoties no sistēmas",
+      "refresh": "Atjaunot",
+      "loading": "Ielādē...",
+      "featureNotImplemented": "Šī funkcija vēl nav ieviesta",
+      "moving": "Pārvieto...",
+      "movedToInbox": "Pārvietots uz iesūtni",
+      "movingToInbox": "Pārvieto uz iesūtni...",
+      "movedToSpam": "Pārvietots uz mēstulēm",
+      "movingToSpam": "Pārvieto uz mēstulēm...",
+      "archiving": "Arhivē...",
+      "archived": "Arhivēts",
+      "failedToMove": "Neizdevās pārvietot ziņojumu",
+      "addingToFavorites": "Pievieno izlasei...",
+      "removingFromFavorites": "Noņem no izlases...",
+      "addedToFavorites": "Pievienots izlasei",
+      "removedFromFavorites": "Noņemts no izlases",
+      "failedToAddToFavorites": "Neizdevās pievienot izlasei",
+      "failedToRemoveFromFavorites": "Neizdevās noņemt no izlases",
+      "failedToModifyFavorites": "Neizdevās modificēt izlasi",
+      "movingToBin": "Pārvieto uz atkritni...",
+      "movedToBin": "Pārvietots uz atkritni",
+      "failedToMoveToBin": "Neizdevās pārvietot uz atkritni",
+      "markingAsRead": "Atzīmē kā lasītu...",
+      "markingAsUnread": "Atzīmē kā nelasītu...",
+      "hiddenImagesWarning": "Drošības apsvērumu dēļ attēli pēc noklusējuma ir paslēpti.",
+      "showImages": "Rādīt attēlus",
+      "disableImages": "Paslēpt attēlus",
+      "trustSender": "Uzticēties sūtītājam",
+      "cancel": "Atcelt",
+      "save": "Saglabāt",
+      "remove": "Noņemt"
     },
     "themes": {
       "dark": "Tumšs",
@@ -65,15 +95,15 @@
       "starred": "Ar zvaigznīti",
       "applyFilters": "Lietot filtrus",
       "reset": "Atstatīt",
-      "searching": "Searching...",
-      "aiSuggestions": "AI Suggestions",
-      "aiSearching": "AI is searching...",
-      "aiSearchError": "AI search failed. Please try again.",
-      "aiNoResults": "No AI suggestions found",
-      "aiEnhancedQuery": "Enhanced search query"
+      "searching": "Meklē...",
+      "aiSuggestions": "AI ieteikumi",
+      "aiSearching": "AI meklē...",
+      "aiSearchError": "AI meklēšana neizdevās. Lūdzu, mēģiniet vēlreiz.",
+      "aiNoResults": "Nav atrasti AI ieteikumi",
+      "aiEnhancedQuery": "Uzlabota meklēšanas frāze"
     },
     "navUser": {
-      "customerSupport": "Klientu atbalsts",
+      "customerSupport": "Kopiena",
       "documentation": "Dokumentācija",
       "appTheme": "Aplikācijas motīvs",
       "accounts": "Konti",
@@ -81,6 +111,7 @@
     },
     "mailCategories": {
       "primary": "Galvenā",
+      "allMail": "Visi E-pasti",
       "important": "Svarīgi",
       "personal": "Personīgi",
       "updates": "Atjauninājumi",
@@ -96,7 +127,7 @@
       "fileCount": "{count, plural, zero {}=0 {faili} one {fails} other {faili}}",
       "saveDraft": "Saglabāt melnrakstu",
       "send": "Sūtīt",
-      "forward": "Forward"
+      "forward": "Pārsūtīt"
     },
     "mailDisplay": {
       "details": "Detaļas",
@@ -123,14 +154,16 @@
       "archive": "Arhīvs",
       "reply": "Atbildēt",
       "moreOptions": "Vairāk iespējas",
-      "moveToSpam": "Move to Spam",
+      "moveToSpam": "Pārvietot uz Mēstulēm",
       "replyAll": "Atbildēt Visiem",
       "forward": "Pārsūtīt",
-      "markAsUnread": "Mark as Unread",
-      "markAsRead": "Mark as Read",
+      "markAsUnread": "Atzīmēt kā nelasītu",
+      "markAsRead": "Atzīmēt kā lasītu",
       "addLabel": "Pievienot iezīmi",
       "muteThread": "Apklusināt pavedienu",
-      "favourites": "Favourites"
+      "favourites": "Izlase",
+      "disableImages": "Slēpt attēlus",
+      "enableImages": "Rādīt attēlus"
     },
     "notes": {
       "title": "Piezīmes",
@@ -193,10 +226,10 @@
       }
     },
     "settings": {
-      "notFound": "Settings not found",
-      "saved": "Settings saved",
-      "failedToSave": "Failed to save settings",
-      "languageChanged": "Language changed to {locale}"
+      "notFound": "Iestatījumu lapa nav atrasta",
+      "saved": "Iestatījumi saglabāti",
+      "failedToSave": "Neizdevās saglabāt iestatījumus",
+      "languageChanged": "Valoda nomainīta uz {locale}"
     },
     "mail": {
       "replies": "{count, plural, zero {}=0 {atbildes} one {# atbilde} other {# atbildes}}",
@@ -214,20 +247,26 @@
       "moveToInbox": "Pārvietot uz Iesūtni",
       "unarchive": "Izņemt no arhīva",
       "archive": "Arhivēt",
-      "moveToTrash": "Pārvietot uz Miskasti",
+      "moveToBin": "Pārvietot uz atkritni",
+      "restoreFromBin": "Atjaunot no atkritnes",
       "markAsUnread": "Atzīmēt kā nelasītu",
-      "markAsRead": "Mark as Read",
-      "addStar": "Pievienot Zvaigzni",
+      "markAsRead": "Atzīmēt kā lasītu",
+      "addFavorite": "Favorite",
+      "removeFavorite": "Unfavorite",
       "muteThread": "Apklusināt pavedienu",
       "moving": "Pārvieto...",
       "moved": "Pārvietots",
       "errorMoving": "Kļūda, pārvietojot",
-      "reply": "Reply",
-      "replyAll": "Reply All",
-      "forward": "Forward",
-      "labels": "Labels",
-      "createNewLabel": "Create New Label",
-      "noLabelsAvailable": "No labels available"
+      "reply": "Atbildēt",
+      "replyAll": "Atbildēt Visiem",
+      "forward": "Pārsūtīt",
+      "labels": "Iezīmes",
+      "createNewLabel": "Izveidot jaunu iezīmi",
+      "noLabelsAvailable": "Nav pieejamas iezīmes",
+      "loadMore": "Ielādēt vairāk"
+    },
+    "units": {
+      "mb": "{amount} MB"
     }
   },
   "navigation": {
@@ -239,7 +278,6 @@
       "archive": "Arhīvs",
       "bin": "Miskaste",
       "feedback": "Atsauksmes",
-      "contact": "Kontakti",
       "settings": "Iestatījumi"
     },
     "settings": {
@@ -247,6 +285,7 @@
       "connections": "Savienojumi",
       "security": "Drošība",
       "appearance": "Izskats",
+      "signatures": "Paraksti",
       "shortcuts": "Īsceļi"
     }
   },
@@ -264,17 +303,19 @@
         "title": "Vispārīgi",
         "description": "Pārvaldīt valodas un e-pasta attēlojuma iestatījumus.",
         "language": "Valoda",
-        "selectLanguage": "Select a language",
+        "selectLanguage": "Izvēlēties valodu",
         "timezone": "Laika zona",
-        "selectTimezone": "Select a timezone",
+        "selectTimezone": "Izvēlieties laika joslu",
         "dynamicContent": "Dinamisks Saturs",
         "dynamicContentDescription": "Atļaut e-pastiem rādīt dinamisku saturu.",
         "externalImages": "Rādīt ārējos attēlus",
         "externalImagesDescription": "Atļaut e-pastiem rādīt attēlus no ārējiem avotiem.",
-        "languageChangedTo": "Language changed to {locale}",
-        "customPrompt": "Custom AI Prompt",
-        "customPromptPlaceholder": "Enter your custom prompt for the AI...",
-        "customPromptDescription": "Customize how the AI writes your email replies. This will be added to the base prompt."
+        "trustedSenders": "Uzticami sūtītāji",
+        "trustedSendersDescription": "Vienmēr rādīt attēlus no šiem sūtītājiem.",
+        "languageChangedTo": "Valoda nomainīta uz {locale}",
+        "customPrompt": "Pielāgota AI instrukcija",
+        "customPromptPlaceholder": "Ievadi savu pielāgoto norādījumu AI...",
+        "customPromptDescription": "Pielāgot, kā AI raksta jūsu e-pasta atbildes. Jūsu norādījumi tiks pievienoti AI noklusējuma instrukcijām."
       },
       "connections": {
         "title": "E-pasta savienojumi",
@@ -297,13 +338,35 @@
         "twoFactorAuthDescription": "Pievieno savam kontam papildu drošības pakāpi",
         "loginNotifications": "Paziņojumi par pierakstīšanos",
         "loginNotificationsDescription": "Saņemt paziņojumus par jauniem mēģinājumiem pierakstīties",
-        "deleteAccount": "Dzēst kontu"
+        "deleteAccount": "Dzēst kontu",
+        "loadImagesDefault": "Ielādēt attēlus pēc noklusējuma",
+        "loadImagesDefaultDescription": "Drošības apsvērumu dēļ attēli netiek ielādēti pēc noklusējuma."
       },
       "appearance": {
         "title": "Izskats",
         "description": "Pielāgot krāsas, burtveidolus un skata iespējas.",
         "theme": "Izskats",
         "inboxType": "Iesūtnes tips"
+      },
+      "signatures": {
+        "title": "E-pasta paraksti",
+        "description": "Izveidojiet un pārvaldiet savu e-pasta parakstu, kas parādās jūsu ziņojumu beigās.",
+        "enableSignature": "Iespējot parakstu",
+        "enableSignatureDescription": "Pievienot parakstu visu izejošo ziņojumu beigās.",
+        "includeByDefault": "Iekļaut pēc noklusējuma",
+        "includeByDefaultDescription": "Automātiski pievienot parakstu, rakstot jaunus e-pastus.",
+        "signatureContent": "Paraksta saturs",
+        "signatureContentPlaceholder": "Izveidojiet savu parakstu ar formatējumu, saitēm un attēliem.",
+        "signaturePreview": "Paraksta priekšskatījums",
+        "signatureSaved": "Paraksts veiksmīgi saglabāts",
+        "signaturePreviewDescription": "Šādi jūsu paraksts izskatīsies e-pastos.",
+        "editorType": "Redaktora veids",
+        "editorTypeDescription": "Izvēlieties starp vienkāršu tekstu/HTML ievadi vai bagātinātu teksta redaktoru jūsu parakstam.",
+        "plainText": "Vienkāršs teksts / HTML",
+        "richText": "Bagātināts teksta redaktors",
+        "richTextDescription": "Izmantojiet bagātinātu teksta redaktoru, lai formatētu savu parakstu.",
+        "richTextPlaceholder": "Formatējiet savu parakstu ar bagātinātu teksta redaktoru...",
+        "signatureContentHelp": "Varat izmantot HTML, lai pievienotu formatējumu, saites un attēlus savam parakstam."
       },
       "shortcuts": {
         "title": "Tastatūras īsceļi",
@@ -337,10 +400,37 @@
       "body": "Saturs",
       "example": "zero@0.email",
       "attachments": "Pielikumi",
+      "addMore": "Pievienot vēl",
       "dropFilesToAttach": "Ievelciet failus, lai pievienotu",
       "writeYourMessageHere": "Raksti savu ziņu šeit...",
       "emailSentSuccessfully": "E-pasts veiksmīgi nosūtīts",
-      "failedToSendEmail": "Neizdevās nosūtīt e-pastu. Lūdzu, mēģiniet vēlreiz."
+      "failedToSendEmail": "Neizdevās nosūtīt e-pastu. Lūdzu, mēģiniet vēlreiz.",
+      "signature": {
+        "title": "Paraksts",
+        "include": "Iekļaut parakstu",
+        "remove": "Noņemt parakstu",
+        "enable": "Ieslēgt parakstu",
+        "disable": "Izslēgt parakstu",
+        "add": "Pievienot parakstu"
+      },
+      "addLink": "Pievienot saiti",
+      "addUrlToCreateALink": "Pievienojiet URL, lai izveidotu saiti. Saite atvērsies jaunā cilnē.",
+      "editor": {
+        "menuBar": {
+          "heading1": "Virsraksts 1",
+          "heading2": "Virsraksts 2",
+          "heading3": "Virsraksts 3",
+          "bold": "Treknraksts",
+          "italic": "Slīpraksts",
+          "strikethrough": "Pārsvītrojums",
+          "underline": "Pasvītrojums",
+          "link": "Saite",
+          "bulletList": "Aizzīmju saraksts",
+          "orderedList": "Numurēts saraksts",
+          "viewAttachments": "Skatīt pielikumus",
+          "attachFiles": "Pievienot failus"
+        }
+      }
     }
   }
 }

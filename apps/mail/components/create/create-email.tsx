@@ -19,22 +19,58 @@ import { toast } from 'sonner';
 import * as React from 'react';
 import Editor from './editor';
 import './prosemirror.css';
+import { useSettings } from '@/hooks/use-settings';
 
 const MAX_VISIBLE_ATTACHMENTS = 12;
 
-export function CreateEmail() {
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const createEmptyDocContent = (): JSONContent => ({
+  type: 'doc',
+  content: [
+    {
+      type: 'paragraph',
+      content: [],
+    },
+  ],
+});
+
+export function CreateEmail({
+  initialTo = '',
+  initialSubject = '',
+  initialBody = '',
+}: {
+  initialTo?: string;
+  initialSubject?: string;
+  initialBody?: string;
+}) {
   const [toInput, setToInput] = React.useState('');
-  const [toEmails, setToEmails] = React.useState<string[]>([]);
-  const [subjectInput, setSubjectInput] = React.useState('');
+  const [toEmails, setToEmails] = React.useState<string[]>(initialTo ? [initialTo] : []);
+  const [subjectInput, setSubjectInput] = React.useState(initialSubject);
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const [resetEditorKey, setResetEditorKey] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [messageContent, setMessageContent] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [messageContent, setMessageContent] = React.useState(initialBody);
   const [draftId, setDraftId] = useQueryState('draftId');
-  const [defaultValue, setDefaultValue] = React.useState<JSONContent | null>(null);
-  const [editorReady, setEditorReady] = React.useState(false);
+  const [includeSignature, setIncludeSignature] = React.useState(true);
+  const { settings } = useSettings();
+  
+  const [defaultValue, setDefaultValue] = React.useState<JSONContent | null>(() => {
+    if (initialBody) {
+      try {
+        return generateJSON(initialBody, [Document, Paragraph, Text, Bold]);
+      } catch (error) {
+        console.error('Error parsing initial body:', error);
+        return createEmptyDocContent();
+      }
+    }
+    return null;
+  });
 
   const { data: session } = useSession();
   const { data: connections } = useConnections();
@@ -45,38 +81,20 @@ export function CreateEmail() {
   }, [session, connections]);
 
   const userName =
-    activeAccount?.name || session?.activeConnection?.name || session?.user.name || '';
+    activeAccount?.name || session?.activeConnection?.name || session?.user?.name || '';
   const userEmail =
-    activeAccount?.email || session?.activeConnection?.email || session?.user.email || '';
+    activeAccount?.email || session?.activeConnection?.email || session?.user?.email || '';
 
   React.useEffect(() => {
     if (!draftId && !defaultValue) {
-      // Set initial empty content
-      setDefaultValue({
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            content: [],
-          },
-        ],
-      });
-      setEditorReady(true);
+      setDefaultValue(createEmptyDocContent());
     }
   }, [draftId, defaultValue]);
 
   React.useEffect(() => {
     const loadDraft = async () => {
       if (!draftId) {
-        setDefaultValue({
-          type: 'doc',
-          content: [
-            {
-              type: 'paragraph',
-              content: [],
-            },
-          ],
-        });
+        setDefaultValue(createEmptyDocContent());
         return;
       }
 
@@ -119,11 +137,6 @@ export function CreateEmail() {
 
   const t = useTranslations();
 
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const handleAddEmail = (email: string) => {
     const trimmedEmail = email.trim().replace(/,$/, '');
 
@@ -144,19 +157,12 @@ export function CreateEmail() {
     setHasUnsavedChanges(true);
   };
 
-  const handleAttachment = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachments([...attachments, ...Array.from(e.target.files)]);
-      setHasUnsavedChanges(true);
-    }
-  };
-
   const saveDraft = React.useCallback(async () => {
     if (!hasUnsavedChanges) return;
     if (!toEmails.length && !subjectInput && !messageContent) return;
 
     try {
-      setIsSaving(true);
+      setIsLoading(true);
       const draftData = {
         to: toEmails.join(', '),
         subject: subjectInput,
@@ -176,7 +182,7 @@ export function CreateEmail() {
       console.error('Error saving draft:', error);
       toast.error('Failed to save draft');
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   }, [toEmails, subjectInput, messageContent, attachments, draftId, hasUnsavedChanges]);
 
@@ -211,13 +217,15 @@ export function CreateEmail() {
     }
 
     try {
+      setIsLoading(true);
       await sendEmail({
-        to: toEmails.join(','),
+        to: toEmails.map((email) => ({ email, name: email })),
         subject: subjectInput,
         message: messageContent,
         attachments: attachments,
       });
 
+      setIsLoading(false);
       toast.success(t('pages.createEmail.emailSentSuccessfully'));
 
       setToInput('');
@@ -226,21 +234,13 @@ export function CreateEmail() {
       setAttachments([]);
       setMessageContent('');
 
-      setDefaultValue({
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            content: [],
-          },
-        ],
-      });
-
+      setDefaultValue(createEmptyDocContent());
       setResetEditorKey((prev) => prev + 1);
 
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error sending email:', error);
+      setIsLoading(false);
       toast.error(t('pages.createEmail.failedToSendEmail'));
     }
   };
@@ -270,7 +270,36 @@ export function CreateEmail() {
 
   // Add ref for to input
   const toInputRef = React.useRef<HTMLInputElement>(null);
+  // Add refs for subject and editor
+  const subjectInputRef = React.useRef<HTMLInputElement>(null);
+  const editorRef = React.useRef<any>(null);
 
+  // Add a mount ref to ensure we only auto-focus once
+  const isFirstMount = React.useRef(true);
+
+  // Auto-focus logic
+  React.useEffect(() => {
+    if (!isFirstMount.current) return;
+    isFirstMount.current = false;
+
+    requestAnimationFrame(() => {
+      if (toEmails.length === 0 && !toInput) {
+        toInputRef.current?.focus();
+        console.log('Focusing to input');
+      } else if (!subjectInput.trim()) {
+        subjectInputRef.current?.focus();
+        console.log('Focusing subject input');
+      } else {
+        const editorElement = document.querySelector('.ProseMirror');
+        if (editorElement instanceof HTMLElement) {
+          editorElement.focus();
+          console.log('Focusing editor');
+        }
+      }
+    });
+  }, []); // Empty dependency array since we only want this on mount
+
+  // Keyboard shortcut handler
   React.useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Only trigger if "/" is pressed and no input/textarea is focused
@@ -283,6 +312,40 @@ export function CreateEmail() {
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, []);
+
+  React.useEffect(() => {
+    if (initialTo) {
+      const emails = initialTo.split(',').map(email => email.trim());
+      const validEmails = emails.filter(email => isValidEmail(email));
+      if (validEmails.length > 0) {
+        setToEmails(validEmails);
+      } else {
+        setToInput(initialTo);
+      }
+    }
+    
+    if (initialSubject) {
+      setSubjectInput(initialSubject);
+    }
+    
+    if (initialBody && !defaultValue) {
+      setDefaultValue({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: initialBody
+              }
+            ]
+          }
+        ]
+      });
+      setMessageContent(initialBody);
+    }
+  }, [initialTo, initialSubject, initialBody, defaultValue]);
 
   return (
     <div
@@ -322,6 +385,7 @@ export function CreateEmail() {
                       </span>
                       <button
                         type="button"
+                        disabled={isLoading}
                         className="text-muted-foreground hover:text-foreground ml-1 rounded-full"
                         onClick={() => {
                           setToEmails((emails) => emails.filter((_, i) => i !== index));
@@ -333,17 +397,30 @@ export function CreateEmail() {
                     </div>
                   ))}
                   <input
+                    ref={toInputRef}
+                    disabled={isLoading}
                     type="email"
                     className="text-md relative left-[3px] min-w-[120px] flex-1 bg-transparent placeholder:text-[#616161] placeholder:opacity-50 focus:outline-none"
                     placeholder={toEmails.length ? '' : t('pages.createEmail.example')}
                     value={toInput}
                     onChange={(e) => setToInput(e.target.value)}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pastedText = e.clipboardData.getData('text');
+                      const emails = pastedText.split(/[,\n]/).map(email => email.trim());
+                      emails.forEach(email => {
+                        if (email && !toEmails.includes(email) && isValidEmail(email)) {
+                          setToEmails(prev => [...prev, email]);
+                          setHasUnsavedChanges(true);
+                        }
+                      });
+                    }}
                     onKeyDown={(e) => {
                       if ((e.key === ',' || e.key === 'Enter' || e.key === ' ') && toInput.trim()) {
                         e.preventDefault();
                         handleAddEmail(toInput);
                       } else if (e.key === 'Backspace' && !toInput && toEmails.length > 0) {
-                        setToEmails((emails) => emails.slice(0, -1));
+                        setToEmails((emails) => emails.filter((_, i) => i !== emails.length - 1));
                         setHasUnsavedChanges(true);
                       }
                     }}
@@ -361,6 +438,8 @@ export function CreateEmail() {
                   {t('common.searchBar.subject')}
                 </div>
                 <input
+                  ref={subjectInputRef}
+                  disabled={isLoading}
                   type="text"
                   className="text-md relative left-[7.5px] w-full bg-transparent placeholder:text-[#616161] placeholder:opacity-50 focus:outline-none"
                   placeholder={t('common.searchBar.subject')}
@@ -398,8 +477,8 @@ export function CreateEmail() {
           </div>
         </div>
 
-        <div className="bg-offsetLight dark:bg-offsetDark sticky bottom-0 left-0 right-0 flex items-center justify-between p-4 pb-3">
-          <div className="flex items-center gap-2">
+        <div className="bg-offsetLight dark:bg-offsetDark sticky bottom-0 left-0 right-0 flex items-center justify-between p-4 pb-3 md:mb-0 mb-16">
+          <div className="flex items-center gap-4">
             <div className="mr-1 pb-2 pt-2">
               <AIAssistant
                 currentContent={messageContent}
@@ -462,13 +541,16 @@ export function CreateEmail() {
                 }}
               />
             </div>
+            
           </div>
           <div className="flex justify-end gap-3">
             <Button
               variant="default"
               className="h-9 w-9 overflow-hidden rounded-full"
               onClick={handleSendEmail}
-              disabled={!toEmails.length || !messageContent.trim() || !subjectInput.trim()}
+              disabled={
+                isLoading || !toEmails.length || !messageContent.trim() || !subjectInput.trim()
+              }
             >
               <ArrowUpIcon className="h-4 w-4" />
             </Button>

@@ -1,10 +1,15 @@
 'use client';
 
-import { SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from './sidebar';
+import {
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar,
+} from './sidebar';
 import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { clearBulkSelectionAtom } from '../mail/use-mail';
-import { useFeaturebase } from '@/hooks/use-featurebase';
 import { type MessageKey } from '@/config/navigation';
 import { Badge } from '@/components/ui/badge';
 import { useStats } from '@/hooks/use-stats';
@@ -16,6 +21,8 @@ import { useAtom } from 'jotai';
 import * as React from 'react';
 import Link from 'next/link';
 import {type NavItem} from '@/config/navigation'
+import { GoldenTicketModal } from '../golden';
+import { useSession } from '@/lib/auth-client';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
   ref?: React.Ref<SVGSVGElement>;
@@ -47,6 +54,7 @@ type IconRefType = SVGSVGElement & {
 export function NavMain({ items }: NavMainProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: session, isPending } = useSession();
 
   /**
    * Validates URLs to prevent open redirect vulnerabilities.
@@ -75,11 +83,6 @@ export function NavMain({ items }: NavMainProps) {
       // Get the current 'from' parameter
       const currentFrom = searchParams.get('from');
       const category = searchParams.get('category');
-
-      // Handle Featurebase button
-      if (item.isFeaturebaseButton) {
-        return '#';
-      }
 
       // Handle settings navigation
       if (item.isSettingsButton) {
@@ -162,12 +165,14 @@ export function NavMain({ items }: NavMainProps) {
                     {...item}
                     isActive={isUrlActive(item.url)}
                     href={getHref(item)}
+                    target={item.target}
                   />
                 ))}
               </div>
             </SidebarMenuItem>
           </Collapsible>
         ))}
+        {!session || isPending ? null : !session?.hasUsedTicket ? <GoldenTicketModal /> : null}
       </SidebarMenu>
     </SidebarGroup>
   );
@@ -176,7 +181,6 @@ export function NavMain({ items }: NavMainProps) {
 function NavItem(item: NavItemProps & { href: string }) {
 	const iconRef = useRef<IconRefType>(null);
 	const { data: stats } = useStats();
-	const { openFeaturebase } = useFeaturebase();
 	const t = useTranslations();
 	const [, clearBulkSelection] = useAtom(clearBulkSelectionAtom);
 
@@ -187,32 +191,19 @@ function NavItem(item: NavItemProps & { href: string }) {
         className="flex cursor-not-allowed items-center opacity-50"
       >
         {item.icon && <item.icon ref={iconRef} className="relative mr-2.5 h-3 w-3.5" />}
-        <p className="mt-0.5 text-[13px]">{t(item.title as MessageKey)}</p>
+        <p className="mt-0.5 text-[13px] truncate">{t(item.title as MessageKey)}</p>
       </SidebarMenuButton>
     );
   }
 
-	// Handle Featurebase button click
-	const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-		clearBulkSelection();
-
-		if (item.isFeaturebaseButton) {
-			e.preventDefault();
-			openFeaturebase();
-		}
-
-    if (item.onClick) {
-      item.onClick(e);
-    }
-  };
-
   // Apply animation handlers to all buttons including back buttons
   const linkProps = {
     href: item.href,
-    onClick: handleClick,
     onMouseEnter: () => iconRef.current?.startAnimation?.(),
     onMouseLeave: () => iconRef.current?.stopAnimation?.(),
   };
+
+  const { setOpenMobile } = useSidebar();
 
   const buttonContent = (
     <SidebarMenuButton
@@ -221,15 +212,14 @@ function NavItem(item: NavItemProps & { href: string }) {
         'hover:bg-subtleWhite dark:hover:bg-subtleBlack flex items-center',
         item.isActive && 'bg-subtleWhite text-accent-foreground dark:bg-subtleBlack',
       )}
+      onClick={() => setOpenMobile(false)}
     >
-      {item.icon && <item.icon ref={iconRef} className="mr-2" />}
-      <p className="mt-0.5 text-[13px]">{t(item.title as MessageKey)}</p>
+      {item.icon && <item.icon ref={iconRef} className="mr-2 shrink-0" />}
+      <p className="mt-0.5 text-[13px] truncate min-w-0 flex-1">{t(item.title as MessageKey)}</p>
       {stats && stats.find((stat) => stat.label?.toLowerCase() === item.id?.toLowerCase()) && (
-        <Badge className="ml-auto rounded-md" variant="outline">
+        <Badge className="ml-auto rounded-md shrink-0" variant="outline">
           {stats
-
             .find((stat) => stat.label?.toLowerCase() === item.id?.toLowerCase())
-
             ?.count?.toLocaleString() || '0'}
         </Badge>
       )}
@@ -243,7 +233,7 @@ function NavItem(item: NavItemProps & { href: string }) {
   return (
     <Collapsible defaultOpen={item.isActive}>
       <CollapsibleTrigger asChild>
-        <Link {...linkProps}>{buttonContent}</Link>
+        <Link {...linkProps} target={item.target}>{buttonContent}</Link>
       </CollapsibleTrigger>
     </Collapsible>
   );

@@ -6,6 +6,7 @@ import { defaultUserSettings } from '@zero/db/user_settings_default';
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getSocialProviders } from './auth-providers';
+import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { db } from '@zero/db';
@@ -67,11 +68,11 @@ const options = {
   },
   plugins: [
     customSession(async ({ user, session }) => {
-      // Combine early access check with user lookup in a single query
       const [foundUser] = await db
         .select({
           activeConnectionId: _user.defaultConnectionId,
           hasEarlyAccess: earlyAccess.isEarlyAccess,
+          hasUsedTicket: earlyAccess.hasUsedTicket
         })
         .from(_user)
         .leftJoin(earlyAccess, eq(_user.email, earlyAccess.email))
@@ -80,7 +81,19 @@ const options = {
 
       // Check early access and proceed
       if (!foundUser?.hasEarlyAccess && process.env.NODE_ENV === 'production') {
-        throw new Error('Early access required. Please join the waitlist.');
+        await db
+          .insert(earlyAccess)
+          .values({
+            id: crypto.randomUUID(),
+            email: user.email,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .catch((err) =>
+            console.log('Tried to add user to earlyAccess after error, failed', foundUser),
+          );
+          redirect('/login?error=early_access_required');
+
       }
 
       let activeConnection = null;
@@ -100,6 +113,10 @@ const options = {
             email: connectionDetails.email,
             picture: connectionDetails.picture,
           };
+        } else {
+          await db.update(_user).set({
+            defaultConnectionId: null,
+          }).where(eq(_user.id, user.id));
         }
       }
 
@@ -157,6 +174,7 @@ const options = {
         activeConnection,
         user,
         session,
+        hasUsedTicket: foundUser?.hasUsedTicket ?? false
       };
     }),
   ],

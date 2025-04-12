@@ -1,5 +1,6 @@
 import { pgTableCreator, text, timestamp, boolean, integer, jsonb } from "drizzle-orm/pg-core";
 import { defaultUserSettings } from "@zero/db/user_settings_default";
+import { unique } from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator((name) => `mail0_${name}`);
 
@@ -61,6 +62,7 @@ export const earlyAccess = createTable("early_access", {
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
   isEarlyAccess: boolean("is_early_access").notNull().default(false),
+  hasUsedTicket: text("has_used_ticket").default('')
 });
 
 export const connection = createTable("connection", {
@@ -78,7 +80,9 @@ export const connection = createTable("connection", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+}, (t) => [
+  unique().on(t.userId, t.email)
+]);
 
 export const summary = createTable("summary", {
   messageId: text("message_id").primaryKey(),
@@ -91,6 +95,7 @@ export const summary = createTable("summary", {
   suggestedReply: text("suggested_reply")
 });
 
+// Testing
 export const note = createTable("note", {
   id: text("id").primaryKey(),
   userId: text("user_id")
