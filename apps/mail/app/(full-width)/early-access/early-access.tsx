@@ -109,11 +109,11 @@ export function EarlyAccessClient({
   const handleCustomEmails = () => {
     const emails = customEmails.split(',').map(email => email.trim());
     const selectedUsers = earlyAccessUsers.filter(user => 
-      emails.includes(user.email) && !user.isEarlyAccess
+      emails.includes(user.email)
     );
     
     if (selectedUsers.length === 0) {
-      toast.error('No valid emails found. Make sure the emails exist and don\'t already have early access.');
+      toast.error('No valid emails found. Make sure the emails exist.');
       return;
     }
 
