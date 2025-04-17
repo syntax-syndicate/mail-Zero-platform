@@ -99,9 +99,9 @@ export function EarlyAccessClient({
   const earlyAccessCount = earlyAccessUsers.filter((user) => user.isEarlyAccess).length;
 
   const selectRandomUsers = () => {
-    const nonEarlyAccessUsers = earlyAccessUsers.filter((user) => !user.isEarlyAccess);
+    const nonEarlyAccessUsers = earlyAccessUsers.filter((user) => user.isEarlyAccess);
     const shuffled = [...nonEarlyAccessUsers].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, Math.min(300, shuffled.length));
+    const selected = shuffled.slice(0, Math.min(5000, shuffled.length));
     setSelectedUsers(selected);
     setIsDialogOpen(true);
   };
@@ -527,7 +527,7 @@ export function EarlyAccessClient({
             disabled={earlyAccessUsers.filter((u) => !u.isEarlyAccess).length === 0 || isUpdating}
           >
             Randomize Early Access (
-            {Math.min(300, earlyAccessUsers.filter((u) => !u.isEarlyAccess).length)} users)
+            {Math.min(5000, earlyAccessUsers.filter((u) => !u.isEarlyAccess).length)} users)
           </Button>
           
           <div className="flex flex-col gap-2">
