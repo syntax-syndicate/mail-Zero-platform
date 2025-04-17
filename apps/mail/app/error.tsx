@@ -2,6 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import React, { useEffect } from 'react';
+import { dexieStorageProvider } from '@/lib/idb';
+import { signOut } from '@/lib/auth-client';
 
 export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
@@ -18,9 +20,17 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
         </div>
 
         {/* Buttons */}
-        <div className="mt-2">
-          <Button variant="outline" onClick={() => reset()} className="text-muted-foreground gap-2">
-            Try Again
+        <div className="mt-4 flex flex-col gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await dexieStorageProvider().clear();
+              await signOut();
+              window.location.href = '/login';
+            }}
+            className="text-muted-foreground gap-2"
+          >
+            Try again
           </Button>
         </div>
       </div>
