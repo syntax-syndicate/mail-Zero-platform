@@ -98,28 +98,70 @@ export function EarlyAccessClient({
 
   const earlyAccessCount = earlyAccessUsers.filter((user) => user.isEarlyAccess).length;
 
-  const selectRandomUsers = () => {
-    const nonEarlyAccessUsers = earlyAccessUsers.filter((user) => user.isEarlyAccess);
-    const shuffled = [...nonEarlyAccessUsers].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, Math.min(5000, shuffled.length));
-    setSelectedUsers(selected);
-    setIsDialogOpen(true);
+  const selectRandomUsers = async () => {
+    try {
+      // First get the list of already emailed users
+      const outputResponse = await fetch('/output.json');
+      const { emails: alreadyEmailed } = await outputResponse.json();
+      
+      // Filter out users who have already been emailed
+      const availableUsers = earlyAccessUsers.filter(user => !alreadyEmailed.includes(user.email));
+      
+      if (availableUsers.length === 0) {
+        toast.error('All users have already been emailed');
+        return;
+      }
+
+      // Randomly select from remaining users
+      const shuffled = [...availableUsers].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 500); // Select 500 users for testing
+      
+      toast.success(`Selected ${selected.length} users who haven't been emailed yet`);
+      setSelectedUsers(selected);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error('Error selecting users:', error);
+      toast.error('Failed to check already emailed users');
+    }
   };
 
-  const handleCustomEmails = () => {
-    const emails = customEmails.split(',').map(email => email.trim());
-    const selectedUsers = earlyAccessUsers.filter(user => 
-      emails.includes(user.email)
-    );
-    
-    if (selectedUsers.length === 0) {
-      toast.error('No valid emails found. Make sure the emails exist.');
-      return;
-    }
+  const handleCustomEmails = async () => {
+    try {
+      const emails = customEmails.split(',').map(email => email.trim());
+      
+      // Get the list of already emailed users
+      const outputResponse = await fetch('/output.json');
+      const { emails: alreadyEmailed } = await outputResponse.json();
+      
+      // Filter out users who have already been emailed
+      const selectedUsers = earlyAccessUsers.filter(user => 
+        emails.includes(user.email) && !alreadyEmailed.includes(user.email)
+      );
+      
+      if (selectedUsers.length === 0) {
+        toast.error('No valid emails found or all specified emails have already been sent');
+        return;
+      }
 
-    setSelectedUsers(selectedUsers);
-    setIsDialogOpen(true);
-    setCustomEmails(''); // Clear the input after opening dialog
+      if (selectedUsers.length !== emails.length) {
+        const notFound = emails.filter(email => !earlyAccessUsers.some(user => user.email === email));
+        const alreadySent = emails.filter(email => alreadyEmailed.includes(email));
+        
+        if (notFound.length > 0) {
+          toast.warning(`Some emails were not found: ${notFound.join(', ')}`);
+        }
+        if (alreadySent.length > 0) {
+          toast.warning(`Some emails were already sent to: ${alreadySent.join(', ')}`);
+        }
+      }
+
+      setSelectedUsers(selectedUsers);
+      setIsDialogOpen(true);
+      setCustomEmails(''); // Clear the input after opening dialog
+    } catch (error) {
+      console.error('Error handling custom emails:', error);
+      toast.error('Failed to check already emailed users');
+    }
   };
 
   const handleConfirm = async () => {
@@ -127,9 +169,24 @@ export function EarlyAccessClient({
       setIsUpdating(true);
       const selectedEmails = selectedUsers.map((user) => user.email);
 
+      // Read the current output.json file
+      const outputResponse = await fetch('/output.json');
+      const { emails: alreadyEmailed } = await outputResponse.json();
+      
+      // Filter out users who have already been emailed
+      const newEmails = selectedEmails.filter(email => !alreadyEmailed.includes(email));
+      
+      if (newEmails.length === 0) {
+        toast.info('All selected users have already been emailed');
+        setIsDialogOpen(false);
+        setSelectedUsers([]);
+        setIsUpdating(false);
+        return;
+      }
+
       // Add users to Resend audience
-      toast.info(`Adding ${selectedEmails.length} users to Resend audience...`);
-      const resendResult = await addUsersToResendAudience(selectedEmails);
+      toast.info(`Adding ${newEmails.length} users to Resend audience...`);
+      const resendResult = await addUsersToResendAudience(newEmails);
       
       if (!resendResult.success && (!resendResult.successfulEmails || resendResult.successfulEmails.length === 0)) {
         toast.error('Failed to add any users to Resend audience. No early access granted.');
@@ -257,13 +314,25 @@ export function EarlyAccessClient({
     const toastId = toast.loading(`Sending emails to ${emails.length} users...`);
     
     try {
-      const response = await fetch('/api/resend/send-early-access', {
+      // Read the current output.json file
+      const outputResponse = await fetch('/output.json');
+      const { emails: alreadyEmailed } = await outputResponse.json();
+      
+      // Filter out users who have already been emailed
+      const newEmails = emails.filter(email => !alreadyEmailed.includes(email));
+      
+      if (newEmails.length === 0) {
+        toast.info('All users have already been emailed', { id: toastId });
+        return { success: true, alreadyEmailed: true };
+      }
+
+      const apiResponse = await fetch('/api/resend/send-early-access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          emails,
+          emails: newEmails,
           subject: 'Welcome to Zero Early Access!',
           content: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html dir="ltr" lang="en">
@@ -392,18 +461,31 @@ export function EarlyAccessClient({
         }),
       });
 
-      if (!response.ok) {
-        console.error(`API response not OK: ${response.status} ${response.statusText}`);
-        toast.error(`Failed to send emails: API returned ${response.status}`, {
+      if (!apiResponse.ok) {
+        console.error(`API response not OK: ${apiResponse.status} ${apiResponse.statusText}`);
+        toast.error(`Failed to send emails: API returned ${apiResponse.status}`, {
           id: toastId,
         });
-        return { success: false, error: `API returned ${response.status}` };
+        return { success: false, error: `API returned ${apiResponse.status}` };
       }
 
-      const data = (await response.json()) as ResendApiResponse;
+      const data = (await apiResponse.json()) as ResendApiResponse;
       
       if (data.success) {
         const successCount = data.successfulCount || (data.successfulEmails?.length || 0);
+        
+        // Update output.json with newly emailed users
+        if (data.successfulEmails && data.successfulEmails.length > 0) {
+          const updatedEmails = [...alreadyEmailed, ...data.successfulEmails];
+          await fetch('/api/update-emailed-users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ emails: updatedEmails }),
+          });
+        }
+        
         toast.success(`Successfully sent emails to ${successCount} users`, {
           id: toastId,
         });
