@@ -31,6 +31,7 @@ import { backgroundQueueAtom } from '@/store/backgroundQueue';
 import { useThread, useThreads } from '@/hooks/use-threads';
 import { useSearchValue } from '@/hooks/use-search-value';
 import { useParams, useRouter } from 'next/navigation';
+import useDelete from '@/hooks/driver/use-delete';
 import { useLabels } from '@/hooks/use-labels';
 import { modifyLabels } from '@/actions/mail';
 import { LABELS, FOLDERS } from '@/lib/utils';
@@ -254,21 +255,8 @@ export function ThreadContextMenu({
       disabled: false,
     },
   ];
-  const handleDelete = () => async () => {
-    try {
-      const promise = deleteThread({ id: threadId }).then(() => {
-        setMail((prev) => ({ ...prev, bulkSelected: [] }));
-        return mutate();
-      });
-      toast.promise(promise, {
-        loading: t('common.actions.deletingMail'),
-        success: t('common.actions.deletedMail'),
-        error: t('common.actions.failedToDeleteMail'),
-      });
-    } catch (error) {
-      console.error(`Error deleting ${threadId ? 'email' : 'thread'}:`, error);
-    }
-  };
+
+  const { mutate: handleDelete } = useDelete();
 
   const getActions = () => {
     if (isSpam) {
@@ -303,7 +291,9 @@ export function ThreadContextMenu({
           id: 'delete-from-bin',
           label: t('common.mail.deleteFromBin'),
           icon: <Trash className="mr-2.5 h-4 w-4" />,
-          action: handleDelete(),
+          action: () => {
+            handleDelete(threadId, emailId ? 'email' : 'thread');
+          },
           disabled: false,
         },
       ];

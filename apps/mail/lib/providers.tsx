@@ -1,13 +1,13 @@
 'use client';
 
-import { EditorProvider } from '@/components/providers/editor-provider';
+import { ConfirmDialogProvider } from '@/components/context/confirmation-dialog-context';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { AISidebarProvider } from '@/components/ui/ai-sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { PostHogProvider } from './posthog-provider';
-import { useSettings } from '@/hooks/use-settings';
 import { Provider as JotaiProvider } from 'jotai';
+import { useSettings } from '@/hooks/use-settings';
 
 export function Providers({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
   const { settings } = useSettings();
@@ -22,7 +22,9 @@ export function Providers({ children, ...props }: React.ComponentProps<typeof Ne
       <NuqsAdapter>
         <NextThemesProvider {...props} defaultTheme={theme}>
           <SidebarProvider>
-            <PostHogProvider>{children}</PostHogProvider>
+            <PostHogProvider>
+              <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
+            </PostHogProvider>
           </SidebarProvider>
         </NextThemesProvider>
       </NuqsAdapter>

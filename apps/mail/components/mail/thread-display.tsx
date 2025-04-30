@@ -1,21 +1,18 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import { useTheme } from 'next-themes';
+import Image from 'next/image';
 
 import {
   ChevronLeft,
   ChevronRight,
   X,
-  Reply,
   Archive,
   ThreeDots,
   Trash,
   Expand,
   ArchiveX,
-  Forward,
-  ReplyAll,
   Star,
 } from '../icons/icons';
 import {
@@ -26,21 +23,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { moveThreadsTo, ThreadDestination } from '@/lib/thread-actions';
-import { useMailNavigation } from '@/hooks/use-mail-navigation';
+import useMoveThreadsTo from '@/hooks/driver/use-move-threads-to';
 import { backgroundQueueAtom } from '@/store/backgroundQueue';
+import type { ThreadDestination } from '@/lib/thread-actions';
 import { useThread, useThreads } from '@/hooks/use-threads';
-import { markAsRead, markAsUnread } from '@/actions/mail';
 import { MailDisplaySkeleton } from './mail-skeleton';
 import { Button } from '@/components/ui/button';
-import { modifyLabels } from '@/actions/mail';
 import { useStats } from '@/hooks/use-stats';
-import ThreadSubject from './thread-subject';
 import ReplyCompose from './reply-composer';
-import { Separator } from '../ui/separator';
+import { markAsRead } from '@/actions/mail';
 import { useTranslations } from 'next-intl';
-import { useMail } from '../mail/use-mail';
-import { NotesPanel } from './note-panel';
 import { cn, FOLDERS } from '@/lib/utils';
 import MailDisplay from './mail-display';
 import { ParsedMessage } from '@/types';
@@ -147,7 +139,6 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
   const { data: emailData, isLoading, mutate: mutateThread } = useThread(id ?? null);
   const { mutate: mutateThreads } = useThreads();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mail, setMail] = useMail();
   const [isStarred, setIsStarred] = useState(false);
   const t = useTranslations();
   const { mutate: mutateStats } = useStats();
@@ -157,6 +148,7 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
   const [, setBackgroundQueue] = useAtom(backgroundQueueAtom);
   const [activeReplyId, setActiveReplyId] = useQueryState('activeReplyId');
   const { resolvedTheme } = useTheme();
+  const { mutate: moveThreadsTo } = useMoveThreadsTo();
 
   const {
     data: { threads: items = [] },
@@ -233,34 +225,12 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
   }, [setThreadId, setMode]);
 
   const moveThreadTo = useCallback(
-    async (destination: ThreadDestination) => {
-      if (!threadId) return;
-      const promise = moveThreadsTo({
-        threadIds: [threadId],
-        currentFolder: folder,
-        destination,
-      });
-      setBackgroundQueue({ type: 'add', threadId: `thread:${threadId}` });
-      handleNext();
-
-      toast.success(
-        destination === 'inbox'
-          ? t('common.actions.movedToInbox')
-          : destination === 'spam'
-            ? t('common.actions.movedToSpam')
-            : destination === 'bin'
-              ? t('common.actions.movedToBin')
-              : t('common.actions.archived')
-      );
-      toast.promise(promise, {
-        error: t('common.actions.failedToMove'),
-        finally: async () => {
-          await Promise.all([mutateStats(), mutateThreads()]);
-          //   setBackgroundQueue({ type: 'delete', threadId: `thread:${threadId}` });
-        },
-      });
+    (destination: ThreadDestination) => {
+      if (threadId && destination) {
+        moveThreadsTo([threadId], folder, destination);
+      }
     },
-    [threadId, folder, t],
+    [threadId, folder],
   );
 
   // Add handleToggleStar function
@@ -335,15 +305,17 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
         {!id ? (
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center justify-center gap-2 text-center">
-              <Image 
-                src={resolvedTheme === 'dark' ? "/empty-state.svg" : "/empty-state-light.svg"} 
-                alt="Empty Thread" 
-                width={200} 
-                height={200} 
+              <Image
+                src={resolvedTheme === 'dark' ? '/empty-state.svg' : '/empty-state-light.svg'}
+                alt="Empty Thread"
+                width={200}
+                height={200}
               />
               <div className="mt-5">
                 <p className="text-lg">It's empty here</p>
-                <p className="text-md text-[#6D6D6D] dark:text-white/50">Choose an email to view details</p>
+                <p className="text-md text-[#6D6D6D] dark:text-white/50">
+                  Choose an email to view details
+                </p>
               </div>
             </div>
           </div>
@@ -357,7 +329,7 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
           </div>
         ) : (
           <>
-            <div className="flex flex-shrink-0 items-center border-b border-[#E7E7E7] dark:border-[#252525] px-1 pb-1 md:px-3 md:pb-[11px] md:pt-[12px] ">
+            <div className="flex flex-shrink-0 items-center border-b border-[#E7E7E7] px-1 pb-1 md:px-3 md:pb-[11px] md:pt-[12px] dark:border-[#252525]">
               <div className="flex flex-1 items-center gap-2">
                 <ThreadActionButton
                   icon={X}
@@ -421,7 +393,7 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => moveThreadTo('bin')}
-                        className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md border border-[#FCCDD5]  dark:border-[#6E2532] dark:bg-[#411D23] bg-[#FDE4E9]"
+                        className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md border border-[#FCCDD5] bg-[#FDE4E9] dark:border-[#6E2532] dark:bg-[#411D23]"
                       >
                         <Trash className="fill-[#F43F5E]" />
                       </button>
