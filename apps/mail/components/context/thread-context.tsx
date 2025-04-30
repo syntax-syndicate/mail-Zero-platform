@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { deleteThread, markAsRead, markAsUnread, toggleStar } from '@/actions/mail';
 import { moveThreadsTo, ThreadDestination } from '@/lib/thread-actions';
+import useMoveThreadsTo from '@/hooks/driver/use-move-threads-to';
 import { backgroundQueueAtom } from '@/store/backgroundQueue';
 import { useThread, useThreads } from '@/hooks/use-threads';
 import { useSearchValue } from '@/hooks/use-search-value';
@@ -130,6 +131,7 @@ export function ThreadContextMenu({
   const [, setThreadId] = useQueryState('threadId');
   const [, setBackgroundQueue] = useAtom(backgroundQueueAtom);
   const { mutate: mutateThread, data: threadData } = useThread(threadId);
+  const { mutate: moveThreadsTo } = useMoveThreadsTo();
   //   const selectedThreads = useMemo(() => {
   //     if (mail.bulkSelected.length) {
   //       return threads.filter((thread) => mail.bulkSelected.includes(thread.id));
@@ -153,6 +155,8 @@ export function ThreadContextMenu({
   };
 
   const handleMove = (from: string, to: string) => async () => {
+    moveThreadsTo(targets);
+
     try {
       let targets = [];
       if (mail.bulkSelected.length) {

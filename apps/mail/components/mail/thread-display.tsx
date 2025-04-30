@@ -145,7 +145,6 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
   const { folder } = useParams<{ folder: string }>();
   const [threadId, setThreadId] = useQueryState('threadId');
   const [mode, setMode] = useQueryState('mode');
-  const [, setBackgroundQueue] = useAtom(backgroundQueueAtom);
   const [activeReplyId, setActiveReplyId] = useQueryState('activeReplyId');
   const { resolvedTheme } = useTheme();
   const { mutate: moveThreadsTo } = useMoveThreadsTo();

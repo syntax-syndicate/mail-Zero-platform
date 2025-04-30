@@ -1,12 +1,13 @@
 import useBackgroundQueue from '@/hooks/ui/use-background-queue';
+import { useMail } from '@/components/mail/use-mail';
 import { moveThreadsTo } from '@/lib/thread-actions';
 import { useThreads } from '@/hooks/use-threads';
+import { useState, useCallback } from 'react';
 import { useStats } from '@/hooks/use-stats';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
 import { toast } from 'sonner';
 
-type ThreadLocation = 'inbox' | 'archive' | 'spam' | 'bin';
+export type ThreadLocation = 'inbox' | 'archive' | 'spam' | 'bin';
 
 const useMoveThreadsTo = () => {
   const t = useTranslations();
@@ -14,18 +15,22 @@ const useMoveThreadsTo = () => {
   const { addManyToQueue, deleteManyFromQueue } = useBackgroundQueue();
   const { mutate: refetchThreads } = useThreads();
   const { mutate: refetchStats } = useStats();
+  const [mail, setMail] = useMail();
 
-  const mutate = async (threadIds: string[], source: string, destination: ThreadLocation) => {
-    setIsLoading(true);
-    addManyToQueue(threadIds);
-    await moveThreadsTo({
-      threadIds,
-      currentFolder: source,
-      destination,
-    });
-    deleteManyFromQueue(threadIds);
-    setIsLoading(false);
-  };
+  const mutate = useCallback(
+    async (threadIds: string[], source: string, destination: ThreadLocation) => {
+      setIsLoading(true);
+      addManyToQueue(threadIds);
+      await moveThreadsTo({
+        threadIds,
+        currentFolder: source,
+        destination,
+      });
+      deleteManyFromQueue(threadIds);
+      setIsLoading(false);
+    },
+    [],
+  );
 
   return {
     mutate: (threadIds: string[], source: string, destination: ThreadLocation) => {
@@ -52,14 +57,22 @@ const useMoveThreadsTo = () => {
         archive: t('common.actions.failedToMove'),
       } satisfies Record<ThreadLocation, string>;
 
-      toast.promise(promise, {
+      // Return so that the caller may still call unwrap to await
+      return toast.promise(promise, {
         loading: loadingMap[destination],
         success: successMap[destination],
         error: errorMap[destination],
         finally: async () => {
           await Promise.all([refetchThreads(), refetchStats()]);
+          setMail({
+            ...mail,
+            bulkSelected: [],
+          });
         },
       });
+    },
+    mutateAsync: async function (threadIds: string[], source: string, destination: ThreadLocation) {
+      await this.mutate(threadIds, source, destination).unwrap();
     },
     isLoading,
   };
