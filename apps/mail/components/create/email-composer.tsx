@@ -100,7 +100,7 @@ export function EmailComposer({
   const { data: emailData } = useThread(threadId ?? null);
   const { data: session } = useSession();
   const [draftId, setDraftId] = useQueryState('draftId');
-  const { data: draft } = useDraft(draftId ?? null);
+  // const { data: draft } = useDraft(draftId ?? null);
   const [aiGeneratedMessage, setAiGeneratedMessage] = useState<string | null>(null);
   const [aiIsLoading, setAiIsLoading] = useState(false);
 
@@ -109,14 +109,6 @@ export function EmailComposer({
       toInputRef.current.focus();
     }
   }, [isComposeOpen]);
-
-  useEffect(() => {
-    if (draft) {
-      if (draft.to) form.setValue('to', draft.to);
-      if (draft.content) form.setValue('message', draft.content);
-      if (draft.subject) form.setValue('subject', draft.subject);
-    }
-  }, [draft]);
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -209,7 +201,6 @@ export function EmailComposer({
   const ccEmails = watch('cc');
   const bccEmails = watch('bcc');
   const subjectInput = watch('subject');
-  const messageContent = watch('message');
   const attachments = watch('attachments');
 
   const handleAttachment = (files: File[]) => {
@@ -227,31 +218,11 @@ export function EmailComposer({
     setHasUnsavedChanges(true);
   };
 
-  // Helper function to create JSONContent from text
-  const createJsonContentFromText = (text: string): JSONContent => ({
-    type: 'doc',
-    content: [
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text }],
-      },
-    ],
-  });
-
-  // Add state for editor content
-  const [editorContent, setEditorContent] = useState<JSONContent>(
-    createJsonContentFromText(messageContent || ''),
-  );
-
-  // Update editorContent when messageContent changes
-  useEffect(() => {
-    setEditorContent(createJsonContentFromText(messageContent || ''));
-  }, [messageContent]);
-
   const editor = useComposeEditor({
     initialValue: initialMessage,
     isReadOnly: isLoading,
     onLengthChange: (length) => {
+      setHasUnsavedChanges(true);
       setMessageLength(length);
     },
     onModEnter: () => {
@@ -314,23 +285,24 @@ export function EmailComposer({
     }
   };
 
-  const handleGenerateReply = async () => {};
-
-  const saveDraft = useCallback(async () => {
-    console.log('trying to save email');
-    if (!hasUnsavedChanges) return;
-    if (!toEmails.length || !subjectInput || !messageContent) return;
+  const saveDraft = async () => {
     const values = getValues();
+
+    if (!hasUnsavedChanges) return;
+    console.log('DRAFT HTML', editor.getHTML());
+    const messageText = editor.getHTML();
+    console.log(values, messageText);
+    if (!values.to.length || !values.subject.length || !messageText.length) return;
 
     try {
       setIsLoading(true);
       const draftData = {
-        to: values?.to?.join(', '),
-        cc: values?.cc?.join(', '),
-        bcc: values?.bcc?.join(', '),
-        subject: values?.subject,
-        message: values?.message,
-        attachments: values?.attachments,
+        to: values.to.join(', '),
+        cc: values.cc?.join(', '),
+        bcc: values.bcc?.join(', '),
+        subject: values.subject,
+        message: messageText,
+        attachments: values.attachments,
         id: draftId,
       };
 
@@ -339,21 +311,20 @@ export function EmailComposer({
       if (response?.id && response.id !== draftId) {
         setDraftId(response.id);
       }
-
-      setHasUnsavedChanges(false);
-      // toast.success(`Draft saved successfully: ${response.id}`);
     } catch (error) {
       console.error('Error saving draft:', error);
       toast.error('Failed to save draft');
     } finally {
       setIsLoading(false);
+      setHasUnsavedChanges(false);
     }
-  }, [toEmails, subjectInput, messageContent, attachments, draftId, hasUnsavedChanges]);
+  };
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
 
     const autoSaveTimer = setTimeout(() => {
+      console.log('timeout set');
       saveDraft();
     }, 3000);
 
@@ -665,12 +636,13 @@ export function EmailComposer({
                 className="flex h-7 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-md bg-black pl-1.5 pr-1 dark:bg-white"
                 onClick={handleSend}
                 disabled={
-                  isLoading || !toEmails.length || !messageContent.trim() || !subjectInput.trim()
+                  isLoading || !toEmails.length || !editor.getHTML().trim() || !subjectInput.trim()
                 }
               >
                 <div className="flex items-center justify-center gap-2.5 pl-0.5">
                   <div className="text-center text-sm leading-none text-white dark:text-black">
-                    {'Send email'}
+                    <span className="hidden md:block">Send email</span>
+                    <span className="block md:hidden">Send</span>
                   </div>
                 </div>
                 <div className="flex h-5 items-center justify-center gap-1 rounded-sm bg-white/10 px-1 dark:bg-black/10">
@@ -684,7 +656,7 @@ export function EmailComposer({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Plus className="h-3 w-3 fill-[#9A9A9A]" />
-                <span className="px-0.5 text-sm">Add files</span>
+                <span className="px-0.5 text-sm hidden md:block">Add files</span>
               </button>
 
               <Input
