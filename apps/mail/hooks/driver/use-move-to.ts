@@ -51,31 +51,29 @@ const useMoveTo = () => {
     }
 
     setIsLoading(true);
+    const promise = moveThreadsTo({
+      threadIds,
+      currentFolder,
+      destination,
+    });
     addManyToQueue(threadIds);
-    return toast.promise(
-      moveThreadsTo({
-        threadIds: threadIds,
-        currentFolder,
-        destination,
-      }),
-      {
-        ...getCopyByDestination(destination),
-        error: (error) => {
-          console.error('Error moving thread(s):', error);
+    return toast.promise(promise, {
+      ...getCopyByDestination(destination),
+      error: (error) => {
+        console.error('Error moving thread(s):', error);
 
-          return t('common.actions.failedToMove');
-        },
-        finally: async () => {
-          setIsLoading(false);
-          deleteManyFromQueue(threadIds);
-          await Promise.all([refetchThreads(), refetchStats()]);
-          setMail({
-            ...mail,
-            bulkSelected: [],
-          });
-        },
+        return t('common.actions.failedToMove');
       },
-    );
+      finally: async () => {
+        setIsLoading(false);
+        deleteManyFromQueue(threadIds);
+        await Promise.all([refetchThreads(), refetchStats()]);
+        setMail({
+          ...mail,
+          bulkSelected: [],
+        });
+      },
+    });
   };
 
   return {

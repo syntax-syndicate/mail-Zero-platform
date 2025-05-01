@@ -262,13 +262,45 @@ export function ThreadDisplay() {
       currentFolder: folder,
       destination,
     });
+    handleNext();
   };
+
+  const moveThreadToV2 = useCallback(
+    async (destination: ThreadDestination) => {
+      if (!id) return;
+      const promise = moveThreadsTo({
+        threadIds: [id],
+        currentFolder: folder,
+        destination,
+      });
+      setBackgroundQueue({ type: 'add', threadId: `thread:${id}` });
+      handleNext();
+
+      toast.promise(promise, {
+        success:
+          destination === 'inbox'
+            ? t('common.actions.movedToInbox')
+            : destination === 'spam'
+              ? t('common.actions.movedToSpam')
+              : destination === 'bin'
+                ? t('common.actions.movedToBin')
+                : t('common.actions.archived'),
+        error: t('common.actions.failedToMove'),
+        finally: async () => {
+          await Promise.all([mutateStats(), mutateThreads()]);
+          //   setBackgroundQueue({ type: 'delete', threadId: `thread:${threadId}` });
+        },
+      });
+    },
+    [id, folder, t],
+  );
 
   const { mutate: deleteThread } = useDelete();
 
   const deleteThisThread = () => {
     if (!id) return;
     deleteThread(id, 'thread');
+    void handleNext();
   };
 
   // Add handleToggleStar function
