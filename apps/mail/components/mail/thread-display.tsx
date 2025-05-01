@@ -22,12 +22,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { CircleAlertIcon, Inbox, ShieldAlertIcon, StopCircleIcon } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import useMoveThreadsTo from '@/hooks/driver/use-move-threads-to';
+import { focusedIndexAtom } from '@/hooks/use-mail-navigation';
 import { backgroundQueueAtom } from '@/store/backgroundQueue';
+import { handleUnsubscribe } from '@/lib/email-utils.client';
 import type { ThreadDestination } from '@/lib/thread-actions';
 import { useThread, useThreads } from '@/hooks/use-threads';
 import { MailDisplaySkeleton } from './mail-skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { useStats } from '@/hooks/use-stats';
 import ReplyCompose from './reply-composer';
@@ -36,7 +40,6 @@ import { useTranslations } from 'next-intl';
 import { cn, FOLDERS } from '@/lib/utils';
 import MailDisplay from './mail-display';
 import { ParsedMessage } from '@/types';
-import { Inbox } from 'lucide-react';
 import { useQueryState } from 'nuqs';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
@@ -135,7 +138,9 @@ function ThreadActionButton({
   );
 }
 
-export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
+export function ThreadDisplay() {
+  const isMobile = useIsMobile();
+  const [id, setThreadId] = useQueryState('threadId');
   const { data: emailData, isLoading, mutate: mutateThread } = useThread(id ?? null);
   const { mutate: mutateThreads } = useThreads();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -143,39 +148,38 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
   const t = useTranslations();
   const { mutate: mutateStats } = useStats();
   const { folder } = useParams<{ folder: string }>();
-  const [threadId, setThreadId] = useQueryState('threadId');
   const [mode, setMode] = useQueryState('mode');
   const [activeReplyId, setActiveReplyId] = useQueryState('activeReplyId');
   const [, setDraftId] = useQueryState('draftId');
   const { resolvedTheme } = useTheme();
-  const { mutate: moveThreadsTo } = useMoveThreadsTo();
+  const [focusedIndex, setFocusedIndex] = useAtom(focusedIndexAtom);
 
   const {
     data: { threads: items = [] },
   } = useThreads();
 
   const handlePrevious = useCallback(() => {
-    if (!id || !items.length) return;
-    const currentIndex = items.findIndex((item) => item.id === id);
-    if (currentIndex > 0) {
-      const prevThread = items[currentIndex - 1];
+    if (!id || !items.length || focusedIndex === null) return;
+    if (focusedIndex > 0) {
+      const prevThread = items[focusedIndex - 1];
       if (prevThread) {
         setThreadId(prevThread.id);
+        setFocusedIndex(focusedIndex - 1);
       }
     }
-  }, [items, id, setThreadId]);
+  }, [items, id, focusedIndex, setThreadId, setFocusedIndex]);
 
   const handleNext = useCallback(() => {
-    if (!id || !items.length) return setThreadId(null);
-    const currentIndex = items.findIndex((item) => item.id === id);
-    if (currentIndex < items.length - 1) {
-      const nextThread = items[currentIndex + 1];
+    if (!id || !items.length || focusedIndex === null) return setThreadId(null);
+    if (focusedIndex < items.length - 1) {
+      const nextThread = items[focusedIndex + 1];
       if (nextThread) {
         setThreadId(nextThread.id);
         setActiveReplyId(null);
+        setFocusedIndex(focusedIndex + 1);
       }
     }
-  }, [items, id, setThreadId]);
+  }, [items, id, focusedIndex, setThreadId, setActiveReplyId, setFocusedIndex]);
 
   // Check if thread contains any images (excluding sender avatars)
   const hasImages = useMemo(() => {
@@ -215,6 +219,14 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
     }
   }, [emailData, id]);
 
+  const handleUnsubscribeProcess = () => {
+    if (!emailData?.latest) return;
+    toast.promise(handleUnsubscribe({ emailData: emailData.latest }), {
+      success: 'Unsubscribed successfully!',
+      error: 'Failed to unsubscribe',
+    });
+  };
+
   const isInArchive = folder === FOLDERS.ARCHIVE;
   const isInSpam = folder === FOLDERS.SPAM;
   const isInBin = folder === FOLDERS.BIN;
@@ -231,12 +243,12 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
         moveThreadsTo([threadId], folder, destination);
       }
     },
-    [threadId, folder],
+    [id, folder],
   );
 
   // Add handleToggleStar function
   const handleToggleStar = useCallback(async () => {
-    if (!emailData || !threadId) return;
+    if (!emailData || !id) return;
 
     const newStarredState = !isStarred;
     setIsStarred(newStarredState);
@@ -246,7 +258,7 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
       toast.success(t('common.actions.removedFromFavorites'));
     }
     mutateThreads();
-  }, [emailData, threadId, isStarred, mutateThreads, t]);
+  }, [emailData, id, isStarred, mutateThreads, t]);
 
   // Set initial star state based on email data
   useEffect(() => {
@@ -498,6 +510,13 @@ export function ThreadDisplay({ isMobile, id }: ThreadDisplayProps) {
                           <ArchiveX className="fill-iconLight dark:fill-iconDark mr-2" />
                           <span>{t('common.threadDisplay.moveToSpam')}</span>
                         </DropdownMenuItem>
+                        {emailData.latest?.listUnsubscribe ||
+                        emailData.latest?.listUnsubscribePost ? (
+                          <DropdownMenuItem onClick={handleUnsubscribeProcess}>
+                            <ShieldAlertIcon className="fill-iconLight dark:fill-iconDark mr-2" />
+                            <span>Unsubscribe</span>
+                          </DropdownMenuItem>
+                        ) : null}
                       </>
                     )}
                   </DropdownMenuContent>

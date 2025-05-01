@@ -12,23 +12,21 @@ import { useSettings } from '@/hooks/use-settings';
 export function Providers({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
   const { settings } = useSettings();
 
-  console.log(settings);
-
   const theme = settings?.colorTheme || 'system';
 
   return (
-    // <AISidebarProvider>
-    <JotaiProvider>
-      <NuqsAdapter>
-        <NextThemesProvider {...props} defaultTheme={theme}>
-          <SidebarProvider>
-            <PostHogProvider>
+    <AISidebarProvider>
+      <JotaiProvider>
+        <NuqsAdapter>
+          <NextThemesProvider {...props} defaultTheme={theme}>
+            <SidebarProvider>
+              <PostHogProvider>
               <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
             </PostHogProvider>
-          </SidebarProvider>
-        </NextThemesProvider>
-      </NuqsAdapter>
-    </JotaiProvider>
-    // </AISidebarProvider>
+            </SidebarProvider>
+          </NextThemesProvider>
+        </NuqsAdapter>
+      </JotaiProvider>
+    </AISidebarProvider>
   );
 }
