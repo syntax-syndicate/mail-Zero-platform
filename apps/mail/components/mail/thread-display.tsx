@@ -5,32 +5,30 @@ import { useTheme } from 'next-themes';
 import Image from 'next/image';
 
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   ChevronLeft,
   ChevronRight,
   X,
   Archive,
   ThreeDots,
   Trash,
-  Expand,
   ArchiveX,
   Star,
 } from '../icons/icons';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
-import { CircleAlertIcon, Inbox, ShieldAlertIcon, StopCircleIcon } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import useMoveThreadsTo from '@/hooks/driver/use-move-threads-to';
 import { focusedIndexAtom } from '@/hooks/use-mail-navigation';
-import { backgroundQueueAtom } from '@/store/backgroundQueue';
-import { handleUnsubscribe } from '@/lib/email-utils.client';
 import type { ThreadDestination } from '@/lib/thread-actions';
+import { handleUnsubscribe } from '@/lib/email-utils.client';
 import { useThread, useThreads } from '@/hooks/use-threads';
 import { MailDisplaySkeleton } from './mail-skeleton';
+import { Inbox, ShieldAlertIcon } from 'lucide-react';
+import useMoveTo from '@/hooks/driver/use-move-to';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { useStats } from '@/hooks/use-stats';
@@ -143,7 +141,7 @@ export function ThreadDisplay() {
   const [id, setThreadId] = useQueryState('threadId');
   const { data: emailData, isLoading, mutate: mutateThread } = useThread(id ?? null);
   const { mutate: mutateThreads } = useThreads();
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
   const t = useTranslations();
   const { mutate: mutateStats } = useStats();
@@ -153,6 +151,7 @@ export function ThreadDisplay() {
   const [, setDraftId] = useQueryState('draftId');
   const { resolvedTheme } = useTheme();
   const [focusedIndex, setFocusedIndex] = useAtom(focusedIndexAtom);
+  const { moveTo } = useMoveTo();
 
   const {
     data: { threads: items = [] },
@@ -239,8 +238,11 @@ export function ThreadDisplay() {
 
   const moveThreadTo = useCallback(
     (destination: ThreadDestination) => {
-      if (threadId && destination) {
-        moveThreadsTo([threadId], folder, destination);
+      if (id && destination) {
+        moveTo([id], {
+          to: destination,
+          from: folder,
+        });
       }
     },
     [id, folder],
