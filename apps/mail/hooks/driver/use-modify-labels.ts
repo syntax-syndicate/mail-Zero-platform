@@ -19,7 +19,7 @@ const useModifyLabels = ({
   const { addManyToQueue, deleteManyFromQueue } = useBackgroundQueue();
   const [mail, setMail] = useMail();
 
-  const mutate = useCallback(
+  const mutateModifyLabels = useCallback(
     async (threadIds: string[], addLabels: string[], removeLabels: string[]) => {
       setIsLoading(true);
       addManyToQueue(threadIds);
@@ -34,12 +34,24 @@ const useModifyLabels = ({
     [],
   );
 
-  return {
-    mutate: (
+  const mutate = useCallback(
+    (
       threadIds: string[],
       { addLabels, removeLabels }: { addLabels?: string[]; removeLabels?: string[] },
     ) => {
-      const promise = mutate(threadIds, addLabels ?? [], removeLabels ?? []);
+      const action = async (threadIds: string[], addLabels: string[], removeLabels: string[]) => {
+        setIsLoading(true);
+        addManyToQueue(threadIds);
+        await modifyLabels({
+          threadId: threadIds,
+          addLabels,
+          removeLabels,
+        });
+        deleteManyFromQueue(threadIds);
+        setIsLoading(false);
+      };
+
+      const promise = action(threadIds, addLabels ?? [], removeLabels ?? []);
 
       if (suppressToasts) {
         promise.then(async () => {
@@ -70,11 +82,16 @@ const useModifyLabels = ({
         },
       });
     },
-    mutateAsync: async function (
+    [],
+  );
+
+  return {
+    mutate,
+    mutateAsync: async (
       threadIds: string[],
       { addLabels, removeLabels }: { addLabels?: string[]; removeLabels?: string[] },
-    ) {
-      return this.mutate(threadIds, {
+    ) => {
+      return mutate(threadIds, {
         addLabels,
         removeLabels,
       }).unwrap();

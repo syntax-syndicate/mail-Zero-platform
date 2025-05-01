@@ -21,62 +21,64 @@ const useMoveTo = () => {
         return {
           loading: t('common.actions.movingToInbox'),
           success: t('common.actions.movedToInbox'),
-          error: t('common.actions.failedToMove'),
         };
       case 'spam':
         return {
           loading: t('common.actions.movingToSpam'),
           success: t('common.actions.movedToSpam'),
-          error: t('common.actions.failedToMove'),
         };
       case 'bin':
         return {
           loading: t('common.actions.movingToBin'),
           success: t('common.actions.movedToBin'),
-          error: t('common.actions.failedToMove'),
         };
       case 'archive':
         return {
           loading: t('common.actions.archiving'),
           success: t('common.actions.archived'),
-          error: t('common.actions.failedToMove'),
         };
       default:
         return {
           loading: t('common.actions.moving'),
           success: t('common.actions.moved'),
-          error: t('common.actions.failedToMove'),
         };
     }
   };
 
+  const moveTo = (threadIds: string[], { to, from }: { to?: string; from?: string }) => {
+    if (!to && !from) {
+      return {
+        unwrap: () => Promise.resolve(),
+      };
+    }
+
+    const promise = modifyLabels(threadIds, {
+      addLabels: to ? [to] : undefined,
+      removeLabels: from ? [from] : undefined,
+    });
+
+    return toast.promise(promise, {
+      ...getCopyByDestination(to),
+      error: (error) => {
+        console.error('Error moving thread(s):', error);
+
+        return t('common.actions.failedToMove');
+      },
+      finally: async () => {
+        await Promise.all([refetchThreads(), refetchStats()]);
+        setMail({
+          ...mail,
+          bulkSelected: [],
+        });
+      },
+    });
+  };
+
   return {
-    moveSelectedTo: function ({ to, from }: { to?: string; from?: string }) {
-      return this.moveTo(mail.bulkSelected, { from, to });
+    moveSelectedTo: ({ to, from }: { to?: string; from?: string }) => {
+      return moveTo(mail.bulkSelected, { from, to });
     },
-    moveTo: (threadIds: string[], { to, from }: { to?: string; from?: string }) => {
-      if (!to && !from) {
-        return {
-          unwrap: () => Promise.resolve(),
-        };
-      }
-
-      const promise = modifyLabels(threadIds, {
-        addLabels: to ? [to] : undefined,
-        removeLabels: from ? [from] : undefined,
-      });
-
-      return toast.promise(promise, {
-        ...getCopyByDestination(to),
-        finally: async () => {
-          await Promise.all([refetchThreads(), refetchStats()]);
-          setMail({
-            ...mail,
-            bulkSelected: [],
-          });
-        },
-      });
-    },
+    moveTo,
     isLoading,
   };
 };
