@@ -13,11 +13,25 @@ const useBackgroundQueue = () => {
   );
 
   return {
-    addToQueue: (threadId: string) => setBackgroundQueue({ type: 'add', threadId }),
-    deleteFromQueue: (threadId: string) => setBackgroundQueue({ type: 'delete', threadId }),
+    addToQueue: (threadId: string) =>
+      setBackgroundQueue({
+        type: 'add',
+        threadId: threadId.startsWith('thread:') ? threadId : `thread:${threadId}`,
+      }),
+    deleteFromQueue: (threadId: string) =>
+      setBackgroundQueue({
+        type: 'delete',
+        threadId: threadId.startsWith('thread:') ? threadId : `thread:${threadId}`,
+      }),
     clearQueue: () => setBackgroundQueue({ type: 'clear' }),
-    addManyToQueue: (threadIds: string[]) => addManyThreadIdsToBackgroundQueue(threadIds),
-    deleteManyFromQueue: (threadIds: string[]) => deleteManyThreadIdsFromBackgroundQueue(threadIds),
+    addManyToQueue: (threadIds: string[]) =>
+      addManyThreadIdsToBackgroundQueue(
+        threadIds.map((id) => (id.startsWith('thread:') ? id : `thread:${id}`)),
+      ),
+    deleteManyFromQueue: (threadIds: string[]) =>
+      deleteManyThreadIdsFromBackgroundQueue(
+        threadIds.map((id) => (id.startsWith('thread:') ? id : `thread:${id}`)),
+      ),
     queue: backgroundQueue,
   };
 };

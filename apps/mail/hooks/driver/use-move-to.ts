@@ -1,7 +1,7 @@
+import { moveThreadsTo, type MoveThreadOptions } from '@/lib/thread-actions';
 import useBackgroundQueue from '@/hooks/ui/use-background-queue';
 import { useMail } from '@/components/mail/use-mail';
 import { useThreads } from '@/hooks/use-threads';
-import { modifyLabels } from '@/actions/mail';
 import { useStats } from '@/hooks/use-stats';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -15,24 +15,24 @@ const useMoveTo = () => {
   const [mail, setMail] = useMail();
   const { addManyToQueue, deleteManyFromQueue } = useBackgroundQueue();
 
-  const getCopyByDestination = (to?: string) => {
+  const getCopyByDestination = (to?: MoveThreadOptions['destination']) => {
     switch (to) {
-      case 'INBOX':
+      case 'inbox':
         return {
           loading: t('common.actions.movingToInbox'),
           success: t('common.actions.movedToInbox'),
         };
-      case 'SPAM':
+      case 'spam':
         return {
           loading: t('common.actions.movingToSpam'),
           success: t('common.actions.movedToSpam'),
         };
-      case 'TRASH':
+      case 'bin':
         return {
           loading: t('common.actions.movingToBin'),
           success: t('common.actions.movedToBin'),
         };
-      case 'ARCHIVE':
+      case 'archive':
         return {
           loading: t('common.actions.archiving'),
           success: t('common.actions.archived'),
@@ -45,21 +45,21 @@ const useMoveTo = () => {
     }
   };
 
-  const moveTo = (threadIds: string[], { to, from }: { to?: string; from?: string }) => {
-    if (!to && !from) {
-      throw new Error('No source or destination specified');
+  const mutate = ({ threadIds, currentFolder, destination }: MoveThreadOptions) => {
+    if (!threadIds.length) {
+      return;
     }
 
     setIsLoading(true);
     addManyToQueue(threadIds);
     return toast.promise(
-      modifyLabels({
-        threadId: threadIds,
-        addLabels: to ? [to] : undefined,
-        removeLabels: from ? [from] : undefined,
+      moveThreadsTo({
+        threadIds: threadIds,
+        currentFolder,
+        destination,
       }),
       {
-        ...getCopyByDestination(to),
+        ...getCopyByDestination(destination),
         error: (error) => {
           console.error('Error moving thread(s):', error);
 
@@ -79,10 +79,7 @@ const useMoveTo = () => {
   };
 
   return {
-    moveSelectedTo: ({ to, from }: { to?: string; from?: string }) => {
-      return moveTo(mail.bulkSelected, { from, to });
-    },
-    moveTo,
+    mutate,
     isLoading,
   };
 };

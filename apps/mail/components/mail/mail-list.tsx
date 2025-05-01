@@ -214,13 +214,14 @@ const Thread = memo(
       mutateThreads();
     }, [getThreadData, message.id, isStarred, mutateThreads, t]);
 
-    const { moveTo } = useMoveTo();
+    const { mutate: moveTo } = useMoveTo();
 
     const moveThreadTo = (destination: ThreadDestination) => {
       if (!message.id) return;
-      moveTo([message.id], {
-        to: destination ? FOLDER_TAGS[destination]?.[0] : undefined,
-        from: FOLDER_TAGS[folder]?.[0],
+      moveTo({
+        threadIds: [message.id],
+        currentFolder: folder,
+        destination,
       });
     };
 

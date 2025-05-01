@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
 
@@ -33,8 +33,12 @@ import { focusedIndexAtom } from '@/hooks/use-mail-navigation';
 import { backgroundQueueAtom } from '@/store/backgroundQueue';
 import { handleUnsubscribe } from '@/lib/email-utils.client';
 import { useThread, useThreads } from '@/hooks/use-threads';
+import { useAISidebar } from '@/components/ui/ai-sidebar';
 import { markAsRead, markAsUnread } from '@/actions/mail';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 import { MailDisplaySkeleton } from './mail-skeleton';
+import useMoveTo from '@/hooks/driver/use-move-to';
+import useDelete from '@/hooks/driver/use-delete';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { modifyLabels } from '@/actions/mail';
@@ -51,8 +55,6 @@ import { ParsedMessage } from '@/types';
 import { useQueryState } from 'nuqs';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
-import { useAISidebar } from '@/components/ui/ai-sidebar';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 
 interface ThreadDisplayProps {
   threadParam?: any;
@@ -251,36 +253,23 @@ export function ThreadDisplay() {
     setDraftId(null);
   }, [setThreadId, setMode]);
 
-  const moveThreadTo = useCallback(
-    async (destination: ThreadDestination) => {
-      if (!id) return;
-      const promise = moveThreadsTo({
-        threadIds: [id],
-        currentFolder: folder,
-        destination,
-      });
-      setBackgroundQueue({ type: 'add', threadId: `thread:${id}` });
-      handleNext();
+  const { mutate: moveTo } = useMoveTo();
 
-      toast.success(
-        destination === 'inbox'
-          ? t('common.actions.movedToInbox')
-          : destination === 'spam'
-            ? t('common.actions.movedToSpam')
-            : destination === 'bin'
-              ? t('common.actions.movedToBin')
-              : t('common.actions.archived'),
-      );
-      toast.promise(promise, {
-        error: t('common.actions.failedToMove'),
-        finally: async () => {
-          await Promise.all([mutateStats(), mutateThreads()]);
-          //   setBackgroundQueue({ type: 'delete', threadId: `thread:${threadId}` });
-        },
-      });
-    },
-    [id, folder, t],
-  );
+  const moveThreadTo = (destination: ThreadDestination) => {
+    if (!id) return;
+    moveTo({
+      threadIds: [id],
+      currentFolder: folder,
+      destination,
+    });
+  };
+
+  const { mutate: deleteThread } = useDelete();
+
+  const deleteThisThread = () => {
+    if (!id) return;
+    deleteThread(id, 'thread');
+  };
 
   // Add handleToggleStar function
   const handleToggleStar = useCallback(async () => {
@@ -527,7 +516,13 @@ export function ThreadDisplay() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => moveThreadTo('bin')}
+                        onClick={() => {
+                          if (folder === 'bin') {
+                            deleteThisThread();
+                          } else {
+                            moveThreadTo('bin');
+                          }
+                        }}
                         className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md border border-[#FCCDD5] bg-[#FDE4E9] dark:border-[#6E2532] dark:bg-[#411D23]"
                       >
                         <Trash className="fill-[#F43F5E]" />
