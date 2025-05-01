@@ -4,9 +4,12 @@ import { sanitizeTipTapHtml } from '@/lib/sanitize-tip-tap-html';
 import { IOutgoingMessage, type ParsedMessage } from '@/types';
 import { type IConfig, type MailManager } from './types';
 import { type gmail_v1, google } from 'googleapis';
+import { setTimeout } from 'node:timers/promises';
 import { cleanSearchValue } from '@/lib/utils';
 import { createMimeMessage } from 'mimetext';
 import { toByteArray } from 'base64-js';
+import { chunk } from 'remeda';
+import pMap from 'p-map';
 import * as he from 'he';
 
 class StandardizedError extends Error {
@@ -83,7 +86,7 @@ const parseDraft = (draft: gmail_v1.Schema$Draft) => {
   };
 };
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) => setTimeout(ms);
 
 const withExponentialBackoff = async <T>(
   operation: () => Promise<T>,
@@ -432,6 +435,56 @@ export const driver = async (config: IConfig): Promise<MailManager> => {
     return { folder, q };
   };
   const gmail = google.gmail({ version: 'v1', auth });
+
+  const modifyThreadLabelsV2 = async (
+    threadIds: string[],
+    requestBody: gmail_v1.Schema$BatchModifyMessagesRequest,
+  ) => {
+    if (threadIds.length === 0) {
+      return;
+    }
+
+    const chunkSize = 1000;
+    const delayBetweenChunks = 100;
+    const results = await pMap(
+      chunk(threadIds, chunkSize),
+      async (batch, index) => {
+        if (index > 0) {
+          await delay(delayBetweenChunks);
+        }
+        try {
+          const response = await gmail.users.messages.batchModify({
+            userId: 'me',
+            requestBody: {
+              ...requestBody,
+              ids: threadIds,
+            },
+          });
+
+          return threadIds.map((threadId) => {
+            return {
+              threadId,
+              status: 'fulfilled' as const,
+              value: response.data,
+            };
+          });
+        } catch (error) {
+          return threadIds.map((threadId) => {
+            return {
+              threadId,
+              status: 'rejected' as const,
+              reason: { error },
+            };
+          });
+        }
+      },
+      {
+        concurrency: 1,
+      },
+    );
+
+    const flatResults = results.flat();
+  };
 
   const modifyThreadLabels = async (
     threadIds: string[],
@@ -860,7 +913,7 @@ export const driver = async (config: IConfig): Promise<MailManager> => {
       return withErrorHandler(
         'modifyLabels',
         async () => {
-          await modifyThreadLabels(threadIds, {
+          await modifyThreadLabelsV2(threadIds, {
             addLabelIds: options.addLabels,
             removeLabelIds: options.removeLabels,
           });

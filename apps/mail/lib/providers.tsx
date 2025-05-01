@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorProvider } from '@/components/providers/editor-provider';
+import { ConfirmDialogProvider } from '@/components/context/confirmation-dialog-context';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { AISidebarProvider } from '@/components/ui/ai-sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -20,7 +20,9 @@ export function Providers({ children, ...props }: React.ComponentProps<typeof Ne
         <JotaiProvider>
           <NextThemesProvider {...props} defaultTheme={theme}>
             <SidebarProvider>
-              <PostHogProvider>{children}</PostHogProvider>
+              <PostHogProvider>
+                <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
+              </PostHogProvider>
             </SidebarProvider>
           </NextThemesProvider>
         </JotaiProvider>
