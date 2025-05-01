@@ -227,7 +227,7 @@ const Thread = memo(
               ? t('common.actions.movedToSpam')
               : destination === 'bin'
                 ? t('common.actions.movedToBin')
-                : t('common.actions.archived')
+                : t('common.actions.archived'),
         );
         toast.promise(promise, {
           error: t('common.actions.failedToMove'),
@@ -604,15 +604,21 @@ const Thread = memo(
                           'text-md flex items-baseline gap-1 group-hover:opacity-100',
                         )}
                       >
-                        <span className={cn('max-w-[18ch] truncate text-sm')}>
-                          {highlightText(
-                            cleanNameDisplay(latestMessage.sender.name) || '',
-                            searchValue.highlight,
-                          )}
-                        </span>{' '}
-                        <span className="flex items-center space-x-2">
-                          <RenderLabels labels={threadLabels} />
-                        </span>
+                        {isFolderSent ? (
+                          <span>{highlightText(latestMessage.subject, searchValue.highlight)}</span>
+                        ) : (
+                          <span className={cn('max-w-[18ch] truncate text-sm')}>
+                            {highlightText(
+                              cleanNameDisplay(latestMessage.sender.name) || '',
+                              searchValue.highlight,
+                            )}
+                          </span>
+                        )}{' '}
+                        {!isFolderSent ? (
+                          <span className="flex items-center space-x-2">
+                            <RenderLabels labels={threadLabels} />
+                          </span>
+                        ) : null}
                       </span>
                       {getThreadData.totalReplies > 1 ? (
                         <Tooltip>
@@ -639,13 +645,23 @@ const Thread = memo(
                     ) : null}
                   </div>
                   <div className="flex justify-between">
-                    <p
-                      className={cn(
-                        'mt-1 line-clamp-1 max-w-[50ch] text-sm text-[#8C8C8C] md:max-w-[25ch]',
-                      )}
-                    >
-                      {highlightText(latestMessage.subject, searchValue.highlight)}
-                    </p>
+                    {isFolderSent ? (
+                      <p
+                        className={cn(
+                          'mt-1 line-clamp-1 max-w-[50ch] text-sm text-[#8C8C8C] md:max-w-[25ch]',
+                        )}
+                      >
+                        {latestMessage.to.map((e) => e.email).join(', ')}
+                      </p>
+                    ) : (
+                      <p
+                        className={cn(
+                          'mt-1 line-clamp-1 max-w-[50ch] text-sm text-[#8C8C8C] md:max-w-[25ch]',
+                        )}
+                      >
+                        {highlightText(latestMessage.subject, searchValue.highlight)}
+                      </p>
+                    )}
                     {labels ? <MailLabels labels={labels} /> : null}
                   </div>
                   {emailContent && (
@@ -719,7 +735,8 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
   const { data: session } = useSession();
   const t = useTranslations();
   const router = useRouter();
-  const [threadId, setThreadId] = useQueryState('threadId');
+  const [, setThreadId] = useQueryState('threadId');
+  const [, setDraftId] = useQueryState('draftId');
   const [category, setCategory] = useQueryState('category');
   const [searchValue, setSearchValue] = useSearchValue();
   const { enableScope, disableScope } = useHotkeysContext();
@@ -849,6 +866,7 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
 
       // Update URL param without navigation
       void setThreadId(messageThreadId);
+      void setDraftId(null);
       void setActiveReplyId(null);
     },
     [mail],
@@ -887,11 +905,9 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
           getSelectMode() === 'range' && 'select-none',
         )}
         onMouseEnter={() => {
-          console.log('[MailList] Mouse Enter - Enabling scope: mail-list');
           enableScope('mail-list');
         }}
         onMouseLeave={() => {
-          console.log('[MailList] Mouse Leave - Disabling scope: mail-list');
           disableScope('mail-list');
         }}
       >
