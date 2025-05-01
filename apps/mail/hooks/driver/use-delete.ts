@@ -16,14 +16,6 @@ const useDelete = () => {
   const { addToQueue, deleteFromQueue } = useBackgroundQueue();
 
   const mutate = async (id: string, type: 'thread' | 'email' = 'thread') => {
-    const confirmed = await confirm(`Are you sure you want to delete this ${type}?`);
-
-    if (!confirmed) {
-      toast.error(`Cancelled deleting ${type}`);
-
-      return;
-    }
-
     try {
       setIsLoading(true);
       addToQueue(id);
@@ -49,14 +41,20 @@ const useDelete = () => {
 
   return {
     mutate: (id: string, type: 'thread' | 'email' = 'thread') => {
-      toast.promise(mutate(id), {
-        loading: t('common.actions.deletingMail'),
-        success: t('common.actions.deletedMail'),
-        error: (error) => {
-          console.error(`Error deleting ${type}:`, error);
+      confirm(`Are you sure you want to delete this ${type}?`).then((confirmed) => {
+        if (!confirmed) {
+          toast.error(`Cancelled deleting ${type}.`);
+        } else {
+          return toast.promise(mutate(id), {
+            loading: t('common.actions.deletingMail'),
+            success: t('common.actions.deletedMail'),
+            error: (error) => {
+              console.error(`Error deleting ${type}:`, error);
 
-          return t('common.actions.failedToDeleteMail');
-        },
+              return t('common.actions.failedToDeleteMail');
+            },
+          });
+        }
       });
     },
     isLoading,

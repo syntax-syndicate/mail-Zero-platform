@@ -15,18 +15,18 @@ export function Providers({ children, ...props }: React.ComponentProps<typeof Ne
   const theme = settings?.colorTheme || 'system';
 
   return (
-    <NuqsAdapter>
-      <AISidebarProvider>
-        <JotaiProvider>
-          <NextThemesProvider {...props} defaultTheme={theme}>
-            <SidebarProvider>
-              <PostHogProvider>
-                <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
-              </PostHogProvider>
-            </SidebarProvider>
-          </NextThemesProvider>
-        </JotaiProvider>
-      </AISidebarProvider>
-    </NuqsAdapter>
+    <ConfirmDialogProvider>
+      <NuqsAdapter>
+        <AISidebarProvider>
+          <JotaiProvider>
+            <NextThemesProvider {...props} defaultTheme={theme}>
+              <SidebarProvider>
+                <PostHogProvider>{children}</PostHogProvider>
+              </SidebarProvider>
+            </NextThemesProvider>
+          </JotaiProvider>
+        </AISidebarProvider>
+      </NuqsAdapter>
+    </ConfirmDialogProvider>
   );
 }

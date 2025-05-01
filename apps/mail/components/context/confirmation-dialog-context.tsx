@@ -1,11 +1,20 @@
 'use client';
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTrigger,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from '@/components/ui/alert-dialog';
 import { createContext, useContext, useState, useRef, type ReactNode, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 
 const ConfirmDialogContext = createContext<{
-  confirm: (message: string) => Promise<boolean>;
+  confirm: (title: string, message?: string) => Promise<boolean>;
 } | null>(null);
 
 export const useConfirmDialog = () => {
@@ -20,10 +29,12 @@ export const useConfirmDialog = () => {
 export const ConfirmDialogProvider = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [title, setTitle] = useState('');
   const resolver = useRef<(value: boolean) => void>(null);
 
-  const confirm = useCallback((message: string) => {
-    setMessage(message);
+  const confirm = useCallback((title: string, message?: string) => {
+    setTitle(title);
+    setMessage(message ?? '');
     setOpen(true);
 
     return new Promise<boolean>((resolve) => {
@@ -32,13 +43,11 @@ export const ConfirmDialogProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   const handleConfirm = () => {
-    setOpen(false);
     resolver.current?.(true);
     resolver.current = null;
   };
 
   const handleCancel = () => {
-    setOpen(false);
     resolver.current?.(false);
     resolver.current = null;
   };
@@ -46,28 +55,30 @@ export const ConfirmDialogProvider = ({ children }: { children: ReactNode }) => 
   return (
     <ConfirmDialogContext.Provider value={{ confirm }}>
       {children}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <p className="text-foreground text-sm">{message}</p>
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+            {message ? <AlertDialogDescription>{message}</AlertDialogDescription> : null}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
               onClick={() => {
                 handleCancel();
               }}
             >
               Cancel
-            </Button>
-            <Button
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={() => {
                 handleConfirm();
               }}
             >
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ConfirmDialogContext.Provider>
   );
 };

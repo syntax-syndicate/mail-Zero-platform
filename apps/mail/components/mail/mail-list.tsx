@@ -47,6 +47,8 @@ import { useHotkeysContext } from 'react-hotkeys-hook';
 import { useParams, useRouter } from 'next/navigation';
 import { useThreadLabels } from '@/hooks/use-labels';
 import type { VirtuosoHandle } from 'react-virtuoso';
+import useMoveTo from '@/hooks/driver/use-move-to';
+import useDelete from '@/hooks/driver/use-delete';
 import { useKeyState } from '@/hooks/use-hot-key';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/lib/auth-client';
@@ -211,34 +213,19 @@ const Thread = memo(
       mutateThreads();
     }, [getThreadData, message.id, isStarred, mutateThreads, t]);
 
-    const moveThreadTo = useCallback(
-      async (destination: ThreadDestination) => {
-        if (!message.id) return;
-        const promise = moveThreadsTo({
-          threadIds: [message.id],
-          currentFolder: folder,
-          destination,
-        });
-        setBackgroundQueue({ type: 'add', threadId: `thread:${message.id}` });
+    const { moveTo } = useMoveTo();
 
-        toast.success(
-          destination === 'inbox'
-            ? t('common.actions.movedToInbox')
-            : destination === 'spam'
-              ? t('common.actions.movedToSpam')
-              : destination === 'bin'
-                ? t('common.actions.movedToBin')
-                : t('common.actions.archived'),
-        );
-        toast.promise(promise, {
-          error: t('common.actions.failedToMove'),
-          finally: async () => {
-            await Promise.all([mutateStats(), mutateThreads()]);
-          },
-        });
-      },
-      [message.id, folder, t, setBackgroundQueue, mutateStats, mutateThreads],
-    );
+    const moveThreadTo = (destination: ThreadDestination) => {
+      if (!message.id) return;
+      moveTo([message.id], { to: destination ?? undefined, from: folder });
+    };
+
+    const { mutate: deleteThread } = useDelete();
+
+    const deleteThisThread = () => {
+      if (!message.id) return;
+      deleteThread(message.id, 'thread');
+    };
 
     const latestMessage = demo ? demoMessage : getThreadData?.latest;
     const emailContent = demo ? demoMessage?.body : getThreadData?.latest?.body;
@@ -521,7 +508,14 @@ const Thread = memo(
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 hover:bg-[#FDE4E9] dark:hover:bg-[#411D23] [&_svg]:size-3.5"
-                      onClick={() => moveThreadTo('bin')}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (folder === 'bin') {
+                          deleteThisThread();
+                        } else {
+                          moveThreadTo('bin');
+                        }
+                      }}
                     >
                       <Trash className="fill-[#F43F5E]" />
                     </Button>
