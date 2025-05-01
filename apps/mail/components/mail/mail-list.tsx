@@ -1,6 +1,15 @@
 'use client';
 
 import {
+  cn,
+  FOLDERS,
+  formatDate,
+  getEmailLogo,
+  getMainSearchTerm,
+  parseNaturalLanguageSearch,
+  FOLDER_TAGS,
+} from '@/lib/utils';
+import {
   Archive2,
   Bell,
   ChevronDown,
@@ -12,14 +21,6 @@ import {
   Trash,
   User,
 } from '../icons/icons';
-import {
-  cn,
-  FOLDERS,
-  formatDate,
-  getEmailLogo,
-  getMainSearchTerm,
-  parseNaturalLanguageSearch,
-} from '@/lib/utils';
 import {
   type ComponentProps,
   memo,
@@ -217,7 +218,10 @@ const Thread = memo(
 
     const moveThreadTo = (destination: ThreadDestination) => {
       if (!message.id) return;
-      moveTo([message.id], { to: destination ?? undefined, from: folder });
+      moveTo([message.id], {
+        to: destination ? FOLDER_TAGS[destination]?.[0] : undefined,
+        from: FOLDER_TAGS[folder]?.[0],
+      });
     };
 
     const { mutate: deleteThread } = useDelete();

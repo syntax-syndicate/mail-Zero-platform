@@ -17,7 +17,7 @@ const useModifyLabels = ({
   const { mutate: refetchThreads } = useThreads();
   const { mutate: refetchStats } = useStats();
   const { addManyToQueue, deleteManyFromQueue } = useBackgroundQueue();
-  const [mail, setMail] = useMail();
+  const [_mail, setMail] = useMail();
   const mutate = useCallback(
     (
       threadIds: string[],
@@ -39,13 +39,15 @@ const useModifyLabels = ({
         success: 'Successfully updated labels',
         error: 'Failed to update labels',
         finally: async () => {
+          setMail((mail) => {
+            return {
+              ...mail,
+              bulkSelected: [],
+            };
+          });
           deleteManyFromQueue(threadIds);
           setIsLoading(false);
           await Promise.all([refetchThreads(), refetchStats()]);
-          setMail({
-            ...mail,
-            bulkSelected: [],
-          });
         },
       });
     },
@@ -54,15 +56,6 @@ const useModifyLabels = ({
 
   return {
     mutate,
-    mutateAsync: async (
-      threadIds: string[],
-      { addLabels, removeLabels }: { addLabels?: string[]; removeLabels?: string[] },
-    ) => {
-      return mutate(threadIds, {
-        addLabels,
-        removeLabels,
-      }).unwrap();
-    },
     isLoading,
   };
 };
