@@ -20,10 +20,8 @@ import {
   ArchiveX,
   Star,
 } from '../icons/icons';
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { focusedIndexAtom } from '@/hooks/use-mail-navigation';
-import type { ThreadDestination } from '@/lib/thread-actions';
 import { handleUnsubscribe } from '@/lib/email-utils.client';
 import { useThread, useThreads } from '@/hooks/use-threads';
 import { MailDisplaySkeleton } from './mail-skeleton';
@@ -235,19 +233,6 @@ export function ThreadDisplay() {
     setActiveReplyId(null);
     setDraftId(null);
   }, [setThreadId, setMode]);
-
-  const moveThreadTo = useCallback(
-    (destination: ThreadDestination) => {
-      if (id && destination) {
-        moveTo([id], {
-          to: destination,
-          from: folder,
-        });
-      }
-    },
-    [id, folder],
-  );
-
   // Add handleToggleStar function
   const handleToggleStar = useCallback(async () => {
     if (!emailData || !id) return;
@@ -448,7 +433,11 @@ export function ThreadDisplay() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => moveThreadTo('archive')}
+                        onClick={() => {
+                          moveTo([id], {
+                            from: FOLDERS.INBOX,
+                          });
+                        }}
                         className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md bg-white dark:bg-[#313131]"
                       >
                         <Archive className="fill-iconLight dark:fill-iconDark" />
@@ -464,7 +453,11 @@ export function ThreadDisplay() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => moveThreadTo('bin')}
+                        onClick={() => {
+                          moveTo([id], {
+                            to: FOLDERS.BIN,
+                          });
+                        }}
                         className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md border border-[#FCCDD5] bg-[#FDE4E9] dark:border-[#6E2532] dark:bg-[#411D23]"
                       >
                         <Trash className="fill-[#F43F5E]" />
@@ -502,13 +495,25 @@ export function ThreadDisplay() {
                     </DropdownMenuItem> */}
 
                     {isInSpam || isInArchive || isInBin ? (
-                      <DropdownMenuItem onClick={() => moveThreadTo('inbox')}>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          moveTo([id], {
+                            to: FOLDERS.INBOX,
+                          });
+                        }}
+                      >
                         <Inbox className="mr-2 h-4 w-4" />
                         <span>{t('common.mail.moveToInbox')}</span>
                       </DropdownMenuItem>
                     ) : (
                       <>
-                        <DropdownMenuItem onClick={() => moveThreadTo('spam')}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            moveTo([id], {
+                              to: FOLDERS.SPAM,
+                            });
+                          }}
+                        >
                           <ArchiveX className="fill-iconLight dark:fill-iconDark mr-2" />
                           <span>{t('common.threadDisplay.moveToSpam')}</span>
                         </DropdownMenuItem>
