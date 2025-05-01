@@ -1,4 +1,5 @@
 import { useConfirmDialog } from '@/components/context/confirmation-dialog-context';
+import useBackgroundQueue from '@/hooks/ui/use-background-queue';
 import { useMail } from '@/components/mail/use-mail';
 import { useThreads } from '@/hooks/use-threads';
 import { deleteThread } from '@/actions/mail';
@@ -12,6 +13,7 @@ const useDelete = () => {
   const { mutate: refetchThreads } = useThreads();
   const t = useTranslations();
   const { confirm } = useConfirmDialog();
+  const { addToQueue, deleteFromQueue } = useBackgroundQueue();
 
   const mutate = async (id: string, type: 'thread' | 'email' = 'thread') => {
     const confirmed = await confirm(`Are you sure you want to delete this ${type}?`);
@@ -24,6 +26,7 @@ const useDelete = () => {
 
     try {
       setIsLoading(true);
+      addToQueue(id);
       await deleteThread({
         id,
       });
@@ -39,6 +42,7 @@ const useDelete = () => {
 
       throw error;
     } finally {
+      deleteFromQueue(id);
       setIsLoading(false);
     }
   };

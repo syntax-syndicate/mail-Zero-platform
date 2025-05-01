@@ -1,38 +1,38 @@
 import useBackgroundQueue from '@/hooks/ui/use-background-queue';
-import useModifyLabels from '@/hooks/driver/use-modify-labels';
 import { useMail } from '@/components/mail/use-mail';
 import { useThreads } from '@/hooks/use-threads';
+import { modifyLabels } from '@/actions/mail';
 import { useStats } from '@/hooks/use-stats';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 const useMoveTo = () => {
   const t = useTranslations();
+  const [isLoading, setIsLoading] = useState(false);
   const { mutate: refetchThreads } = useThreads();
   const { mutate: refetchStats } = useStats();
   const [mail, setMail] = useMail();
-  const { mutateAsync: modifyLabels, isLoading } = useModifyLabels({
-    suppressToasts: true,
-  });
+  const { addManyToQueue, deleteManyFromQueue } = useBackgroundQueue();
 
   const getCopyByDestination = (to?: string) => {
     switch (to) {
-      case 'inbox':
+      case 'INBOX':
         return {
           loading: t('common.actions.movingToInbox'),
           success: t('common.actions.movedToInbox'),
         };
-      case 'spam':
+      case 'SPAM':
         return {
           loading: t('common.actions.movingToSpam'),
           success: t('common.actions.movedToSpam'),
         };
-      case 'bin':
+      case 'TRASH':
         return {
           loading: t('common.actions.movingToBin'),
           success: t('common.actions.movedToBin'),
         };
-      case 'archive':
+      case 'ARCHIVE':
         return {
           loading: t('common.actions.archiving'),
           success: t('common.actions.archived'),
@@ -47,31 +47,35 @@ const useMoveTo = () => {
 
   const moveTo = (threadIds: string[], { to, from }: { to?: string; from?: string }) => {
     if (!to && !from) {
-      return {
-        unwrap: () => Promise.resolve(),
-      };
+      throw new Error('No source or destination specified');
     }
 
-    const promise = modifyLabels(threadIds, {
-      addLabels: to ? [to] : undefined,
-      removeLabels: from ? [from] : undefined,
-    });
+    setIsLoading(true);
+    addManyToQueue(threadIds);
+    return toast.promise(
+      modifyLabels({
+        threadId: threadIds,
+        addLabels: to ? [to] : undefined,
+        removeLabels: from ? [from] : undefined,
+      }),
+      {
+        ...getCopyByDestination(to),
+        error: (error) => {
+          console.error('Error moving thread(s):', error);
 
-    return toast.promise(promise, {
-      ...getCopyByDestination(to),
-      error: (error) => {
-        console.error('Error moving thread(s):', error);
-
-        return t('common.actions.failedToMove');
+          return t('common.actions.failedToMove');
+        },
+        finally: async () => {
+          setIsLoading(false);
+          deleteManyFromQueue(threadIds);
+          await Promise.all([refetchThreads(), refetchStats()]);
+          setMail({
+            ...mail,
+            bulkSelected: [],
+          });
+        },
       },
-      finally: async () => {
-        await Promise.all([refetchThreads(), refetchStats()]);
-        setMail({
-          ...mail,
-          bulkSelected: [],
-        });
-      },
-    });
+    );
   };
 
   return {

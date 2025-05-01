@@ -18,62 +18,29 @@ const useModifyLabels = ({
   const { mutate: refetchStats } = useStats();
   const { addManyToQueue, deleteManyFromQueue } = useBackgroundQueue();
   const [mail, setMail] = useMail();
+  const mutate = useCallback(
+    (
+      threadIds: string[],
+      { addLabels = [], removeLabels = [] }: { addLabels?: string[]; removeLabels?: string[] },
+    ) => {
+      if (addLabels.length === 0 && removeLabels.length === 0) {
+        throw new Error('No label changes specified');
+      }
 
-  const mutateModifyLabels = useCallback(
-    async (threadIds: string[], addLabels: string[], removeLabels: string[]) => {
       setIsLoading(true);
       addManyToQueue(threadIds);
-      await modifyLabels({
+      const promise = modifyLabels({
         threadId: threadIds,
         addLabels,
         removeLabels,
       });
-      deleteManyFromQueue(threadIds);
-      setIsLoading(false);
-    },
-    [],
-  );
-
-  const mutate = useCallback(
-    (
-      threadIds: string[],
-      { addLabels, removeLabels }: { addLabels?: string[]; removeLabels?: string[] },
-    ) => {
-      const action = async (threadIds: string[], addLabels: string[], removeLabels: string[]) => {
-        setIsLoading(true);
-        addManyToQueue(threadIds);
-        await modifyLabels({
-          threadId: threadIds,
-          addLabels,
-          removeLabels,
-        });
-        deleteManyFromQueue(threadIds);
-        setIsLoading(false);
-      };
-
-      const promise = action(threadIds, addLabels ?? [], removeLabels ?? []);
-
-      if (suppressToasts) {
-        promise.then(async () => {
-          await Promise.all([refetchThreads(), refetchStats()]);
-          setMail({
-            ...mail,
-            bulkSelected: [],
-          });
-        });
-
-        return {
-          unwrap: async () => {
-            return promise;
-          },
-        };
-      }
-
       return toast.promise(promise, {
         loading: t('common.actions.loading'),
         success: 'Successfully updated labels',
         error: 'Failed to update labels',
         finally: async () => {
+          deleteManyFromQueue(threadIds);
+          setIsLoading(false);
           await Promise.all([refetchThreads(), refetchStats()]);
           setMail({
             ...mail,
