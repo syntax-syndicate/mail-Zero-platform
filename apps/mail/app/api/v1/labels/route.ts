@@ -26,7 +26,12 @@ export async function GET(req: NextRequest) {
     if (!labels) {
       return NextResponse.json([], { status: 200 });
     }
-    return NextResponse.json(labels.filter((label) => label.type === 'user'));
+
+    return NextResponse.json(
+      labels
+        .filter((label) => label.type === 'user')
+        .filter((label) => !/\[.*?\]/.test(label.name)),
+    );
   } catch (error) {
     console.error('Error fetching labels:', error);
     return NextResponse.json({ error: 'Failed to fetch labels' }, { status: 400 });
