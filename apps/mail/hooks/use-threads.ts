@@ -35,7 +35,6 @@ const fetchThread = async (args: any[]) => {
     const response = await axios.get<IGetThreadResponse>(`/api/driver/${id}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching email:', error);
     throw error;
   }
 };

@@ -44,14 +44,13 @@ export const GET = async (req: NextRequest) => {
       headers,
     });
   } catch (error: any) {
-    console.error('Error getting threads:', error);
-    // throw new Error('Cannot get threads');
-    return NextResponse.json(
-      { threads: [], nextPageToken: undefined },
-      {
-        status: 400,
-        statusText: 'Cannot get threads',
-      },
-    );
+    throw new Error('Cannot get threads');
+    // return NextResponse.json(
+    //   { threads: [], nextPageToken: undefined },
+    //   {
+    //     status: 400,
+    //     statusText: 'Cannot get threads',
+    //   },
+    // );
   }
 };

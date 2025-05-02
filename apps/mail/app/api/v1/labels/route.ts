@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(labels.filter((label) => label.type === 'user'));
   } catch (error: any) {
-    console.error('Error fetching labels:', error);
     throw new Error(error);
   }
 }
@@ -58,9 +57,8 @@ export async function POST(req: NextRequest) {
     const driver = await getActiveDriver();
     const result = await driver.createLabel(label);
     return NextResponse.json(result);
-  } catch (error) {
-    console.error('Error creating label:', error);
-    return NextResponse.json({ error: 'Failed to create label' }, { status: 400 });
+  } catch (error: any) {
+    throw new Error(error);
   }
 }
 
@@ -85,9 +83,8 @@ export async function PATCH(req: NextRequest) {
     const driver = await getActiveDriver();
     const result = await driver.updateLabel(id, label);
     return NextResponse.json(result);
-  } catch (error) {
-    console.error('Error updating label:', error);
-    return NextResponse.json({ error: 'Failed to update label' }, { status: 400 });
+  } catch (error: any) {
+    throw new Error(error);
   }
 }
 
@@ -112,8 +109,7 @@ export async function DELETE(req: NextRequest) {
     const driver = await getActiveDriver();
     await driver.deleteLabel(id);
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting label:', error);
-    return NextResponse.json({ error: 'Failed to delete label' }, { status: 400 });
+  } catch (error: any) {
+    throw new Error(error);
   }
 }
