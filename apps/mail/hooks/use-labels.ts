@@ -27,6 +27,10 @@ export function useLabels() {
     mutate,
   } = useSWR<Label[]>(session ? [session?.connectionId, 'user-labels'] : null, fetcher);
 
+  if (error) {
+    throw error;
+  }
+
   return {
     mutate,
     labels: labels || [],

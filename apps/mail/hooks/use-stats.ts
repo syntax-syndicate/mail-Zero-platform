@@ -20,6 +20,10 @@ export const useStats = () => {
 
   const debouncedMutate = useDebounce(originalMutate, 3000);
 
+  if (error) {
+    throw error;
+  }
+
   return {
     data: data ?? [],
     isValidating,

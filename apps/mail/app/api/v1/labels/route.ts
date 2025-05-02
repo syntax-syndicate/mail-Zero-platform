@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([], { status: 200 });
     }
     return NextResponse.json(labels.filter((label) => label.type === 'user'));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching labels:', error);
-    return NextResponse.json({ error: 'Failed to fetch labels' }, { status: 400 });
+    throw new Error(error);
   }
 }
 

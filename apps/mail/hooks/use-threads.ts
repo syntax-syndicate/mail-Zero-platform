@@ -89,12 +89,12 @@ export const useThreads = () => {
         max: max?.toString() ?? defaultPageSize.toString(),
         pageToken: pageToken ?? '',
       } as Record<string, string>);
-      console.log('Fetching emails with params:', {
-        q: query,
-        folder,
-        max: max?.toString() ?? defaultPageSize.toString(),
-        pageToken: pageToken ?? '',
-      });
+      // console.log('Fetching emails with params:', {
+      //   q: query,
+      //   folder,
+      //   max: max?.toString() ?? defaultPageSize.toString(),
+      //   pageToken: pageToken ?? '',
+      // });
       const res = await axios.get<RawResponse>(`/api/driver?${searchParams.toString()}`);
       return res.data;
     },
@@ -125,6 +125,10 @@ export const useThreads = () => {
 
   const debouncedMutate = useDebounce(originalMutate, 3000);
 
+  if (error) {
+    throw error;
+  }
+
   return {
     data: {
       threads,
@@ -148,6 +152,10 @@ export const useThread = (threadId: string | null) => {
     session?.user.id && id ? [session.user.id, id, session.connectionId] : null,
     () => axios.get<IGetThreadResponse>(`/api/driver/${id}`).then((res) => res.data),
   );
+
+  if (error) {
+    throw error;
+  }
 
   const isGroupThread = useMemo(() => {
     if (!data?.latest?.id) return false;

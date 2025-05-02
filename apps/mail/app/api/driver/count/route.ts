@@ -24,10 +24,11 @@ export const GET = async (req: NextRequest) => {
       status: 200,
       headers,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Error getting count:', error);
-    return NextResponse.json([], {
-      status: 400,
-    });
+    // return NextResponse.json([], {
+    //   status: 400,
+    // });
+    throw new Error(error);
   }
 };
