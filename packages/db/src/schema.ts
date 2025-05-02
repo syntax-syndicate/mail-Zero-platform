@@ -1,7 +1,7 @@
-import { pgTableCreator, text, timestamp, boolean, integer, jsonb, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTableCreator, text, timestamp, boolean, integer, jsonb, primaryKey, json } from 'drizzle-orm/pg-core';
+import type { WritingStyleMatrix } from '@zero/mail/services/writing-style-service';
 import { defaultUserSettings } from '@zero/db/user_settings_default';
 import { unique } from 'drizzle-orm/pg-core';
-import type { WritingStyleMatrix } from '@zero/mail/services/writing-style-service';
 
 export const createTable = pgTableCreator((name) => `mail0_${name}`);
 
@@ -147,3 +147,33 @@ export const writingStyleMatrix = createTable('writing_style_matrix', {
     }),
   ]
 })
+
+export const pluginSettings = createTable(
+  'plugin_settings',
+  {
+    pluginId: text('plugin_id').notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    added: boolean('added').notNull().default(true),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.pluginId, table.userId] })],
+);
+
+export const pluginData = createTable(
+  'plugin_data',
+  {
+    pluginId: text('plugin_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id),
+    key: text('key').notNull(),
+    data: json('data').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.pluginId, table.userId, table.key] })],
+);

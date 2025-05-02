@@ -176,6 +176,11 @@ export const navigationConfig: Record<string, NavConfig> = {
             url: '/settings/shortcuts',
             icon: Tabs,
           },
+          {
+            title: 'navigation.settings.plugins',
+            url: '/settings/plugins',
+            icon: Tabs,
+          },
           // {
           //   title: 'navigation.settings.signatures',
           //   url: '/settings/signatures',
