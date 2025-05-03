@@ -241,9 +241,14 @@ export function EmailComposer({
 
   const handleSend = async () => {
     try {
+      const values = getValues();
+
+      if (!values.to.length || !values.subject || !editor.getHTML().length) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
       setIsLoading(true);
       setAiGeneratedMessage(null);
-      const values = getValues();
       await onSendEmail({
         to: values.to,
         cc: showCc ? values.cc : undefined,
