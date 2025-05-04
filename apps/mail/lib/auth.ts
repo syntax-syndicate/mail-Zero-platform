@@ -7,6 +7,7 @@ import {
   earlyAccess,
   session,
   userHotkeys,
+  writingStyleMatrix,
 } from '@zero/db/schema';
 import { createAuthMiddleware, customSession } from 'better-auth/plugins';
 import { Account, betterAuth, type BetterAuthOptions } from 'better-auth';
@@ -97,11 +98,23 @@ const options = {
         }
 
         await db.transaction(async (tx) => {
+          const connections = await db
+            .select()
+            .from(connection)
+            .where(eq(connection.userId, user.id));
+
+          connections.map(async (connection) => {
+            await tx
+              .delete(writingStyleMatrix)
+              .where(eq(writingStyleMatrix.connectionId, connection.id));
+          });
+
           await tx.delete(connection).where(eq(connection.userId, user.id));
           await tx.delete(account).where(eq(account.userId, user.id));
           await tx.delete(session).where(eq(session.userId, user.id));
           await tx.delete(userSettings).where(eq(userSettings.userId, user.id));
           await tx.delete(_user).where(eq(_user.id, user.id));
+
           await tx.delete(userHotkeys).where(eq(userHotkeys.userId, user.id));
         });
       },
