@@ -487,19 +487,9 @@ function BulkSelectActions() {
 export const Categories = () => {
   const t = useTranslations();
   const [category] = useQueryState('category', {
-    defaultValue: 'Important',
+    defaultValue: 'All Mail',
   });
   return [
-    {
-      id: 'Important',
-      name: t('common.mailCategories.important'),
-      searchValue: 'is:important NOT is:sent NOT is:draft',
-      icon: (
-        <Lightning
-          className={cn('fill-[#6D6D6D] dark:fill-white', category === 'Important' && 'fill-white')}
-        />
-      ),
-    },
     {
       id: 'All Mail',
       name: 'All Mail',
@@ -511,6 +501,16 @@ export const Categories = () => {
       ),
       colors:
         'border-0 bg-[#006FFE] text-white dark:bg-[#006FFE] dark:text-white dark:hover:bg-[#006FFE]/90',
+    },
+    {
+      id: 'Important',
+      name: t('common.mailCategories.important'),
+      searchValue: 'is:important NOT is:sent NOT is:draft',
+      icon: (
+        <Lightning
+          className={cn('fill-[#6D6D6D] dark:fill-white', category === 'Important' && 'fill-white')}
+        />
+      ),
     },
     {
       id: 'Personal',
@@ -591,7 +591,7 @@ function CategorySelect({ isMultiSelectMode }: { isMultiSelectMode: boolean }) {
   const params = useParams<{ folder: string }>();
   const folder = params?.folder ?? 'inbox';
   const [category, setCategory] = useQueryState('category', {
-    defaultValue: 'Important',
+    defaultValue: 'All Mail',
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const activeTabElementRef = useRef<HTMLButtonElement>(null);
@@ -604,7 +604,7 @@ function CategorySelect({ isMultiSelectMode }: { isMultiSelectMode: boolean }) {
   if (!primaryCategory) return null;
 
   const renderCategoryButton = (cat: CategoryType, isOverlay = false, idx?: number) => {
-    const isSelected = cat.id === (category || 'Primary');
+    const isSelected = cat.id === (category || 'All Mail');
     const bgColor = getCategoryColor(cat.id);
 
     return (
