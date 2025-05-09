@@ -664,7 +664,7 @@ export function EmailComposer({
 
       {/* Message Content */}
       <div className="relative -bottom-1 flex flex-col items-start justify-start gap-2 self-stretch border-t bg-[#FFFFFF] px-3 py-3 outline-white/5 dark:bg-[#202020]">
-        <div className="flex flex-col gap-2.5 self-stretch">
+        <div className="flex max-h-[calc(100dvh-280px)] flex-col gap-2.5 self-stretch overflow-y-auto">
           <EditorContent editor={editor} />
         </div>
 
@@ -869,7 +869,7 @@ export function EmailComposer({
                       <Sparkles className="h-3.5 w-3.5 fill-black dark:fill-white" />
                     )}
                   </div>
-                  <div className="text-center text-sm leading-none text-black dark:text-white hidden md:block">
+                  <div className="hidden text-center text-sm leading-none text-black md:block dark:text-white">
                     Generate
                   </div>
                 </div>
@@ -879,7 +879,7 @@ export function EmailComposer({
               <TooltipTrigger asChild>
                 <button
                   disabled
-                  className="h-7 items-center gap-0.5 overflow-hidden rounded-md bg-white/5 px-1.5 shadow-sm hover:bg-white/10 disabled:opacity-50 hidden md:flex"
+                  className="hidden h-7 items-center gap-0.5 overflow-hidden rounded-md bg-white/5 px-1.5 shadow-sm hover:bg-white/10 disabled:opacity-50 md:flex"
                 >
                   <Smile className="h-3 w-3 fill-[#9A9A9A]" />
                   <span className="px-0.5 text-sm">Casual</span>
@@ -893,7 +893,7 @@ export function EmailComposer({
               <TooltipTrigger asChild>
                 <button
                   disabled
-                  className="flex h-7 items-center gap-0.5 overflow-hidden rounded-md bg-white/5 px-1.5 shadow-sm hover:bg-white/10 disabled:opacity-50 hidden md:flex"
+                  className="flex hidden h-7 items-center gap-0.5 overflow-hidden rounded-md bg-white/5 px-1.5 shadow-sm hover:bg-white/10 disabled:opacity-50 md:flex"
                 >
                   {messageLength < 50 && <ShortStack className="h-3 w-3 fill-[#9A9A9A]" />}
                   {messageLength >= 50 && messageLength < 200 && (
