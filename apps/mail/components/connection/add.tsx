@@ -12,20 +12,21 @@ import { authClient } from '@/lib/auth-client';
 import { usePathname } from 'next/navigation';
 import { Plus, UserPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { Button } from '../ui/button';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
 
 export const AddConnectionDialog = ({
   children,
   className,
-  onOpenChange,
 }: {
   children?: React.ReactNode;
   className?: string;
-  onOpenChange?: (open: boolean) => void;
 }) => {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
   const { connections, attach } = useBilling();
   const t = useTranslations();
 
@@ -51,7 +52,7 @@ export const AddConnectionDialog = ({
   };
 
   return (
-    <Dialog onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
         {children || (
           <Button
@@ -107,12 +108,17 @@ export const AddConnectionDialog = ({
                 disabled={!canCreateConnection}
                 variant="outline"
                 className="h-24 w-full flex-col items-center justify-center gap-2"
-                onClick={async () =>
-                  await authClient.linkSocial({
-                    provider: provider.providerId,
-                    callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/${pathname}`,
-                  })
-                }
+                onClick={async () => {
+                  if (provider.providerId === 'imap-smtp') {
+                    setOpen(false);
+                    router.push('/settings/connections?add-smtp-imap=true');
+                  } else {
+                    await authClient.linkSocial({
+                      provider: provider.providerId,
+                      callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/${pathname}`,
+                    });
+                  }
+                }}
               >
                 <svg viewBox="0 0 24 24" className="h-12 w-12">
                   <path fill="currentColor" d={provider.icon} />

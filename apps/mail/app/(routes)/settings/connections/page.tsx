@@ -10,6 +10,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import AddSmtpImapDialog from '@/components/connection/add-smtp-imap-dialog';
 import { SettingsCard } from '@/components/settings/settings-card';
 import { AddConnectionDialog } from '@/components/connection/add';
 import { useSession, authClient } from '@/lib/auth-client';
@@ -23,11 +24,13 @@ import { emailProviders } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';
+import { useQueryState } from 'nuqs';
 import { useState } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 
 export default function ConnectionsPage() {
+  const [addSmtpImap, setAddSmtpImap] = useQueryState('add-smtp-imap');
   const { data, isLoading, refetch: refetchConnections } = useConnections();
   const { refetch } = useSession();
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
@@ -194,6 +197,19 @@ export default function ConnectionsPage() {
               ))}
             </div>
           ) : null}
+
+          {addSmtpImap === 'true' && (
+            <AddSmtpImapDialog
+              open={addSmtpImap === 'true'}
+              onOpenChange={(open) => {
+                if (open) {
+                  setAddSmtpImap('true');
+                } else {
+                  setAddSmtpImap(null);
+                }
+              }}
+            />
+          )}
 
           <div className="flex items-center justify-start">
             <AddConnectionDialog>
