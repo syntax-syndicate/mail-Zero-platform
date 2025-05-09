@@ -22,6 +22,7 @@ import { Input } from '../ui/input';
 import { useState } from 'react';
 import VoiceChat from './voice';
 import Image from 'next/image';
+import { MailLabels } from '../mail/mail-list';
 
 const renderThread = (thread: { id: string; title: string; snippet: string }) => {
   const [, setThreadId] = useQueryState('threadId');
@@ -52,9 +53,12 @@ const renderThread = (thread: { id: string; title: string; snippet: string }) =>
                 {getThread.latest.receivedOn ? format(getThread.latest.receivedOn, 'MMMM do') : ''}
               </span>
             </div>
-            <span className="max-w-[220px] truncate text-xs text-[#8C8C8C] dark:text-[#8C8C8C]">
-              {getThread.latest?.subject}
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="max-w-[15ch] truncate text-xs text-[#8C8C8C] dark:text-[#8C8C8C]">
+                {getThread.latest?.subject}
+              </span>
+              {getThread.labels && <MailLabels labels={getThread.labels} />}
+            </div>
           </div>
         </div>
       </div>
