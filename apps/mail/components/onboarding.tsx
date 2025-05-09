@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import confetti from 'canvas-confetti';
+import { useQueryState } from 'nuqs';
 
 const steps = [
   {
@@ -52,16 +53,17 @@ const steps = [
 
 export function OnboardingDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [dialogOpen, setDialogOpen] = useQueryState('isOnboardingOpen');
 
   useEffect(() => {
-    if (currentStep === steps.length - 1) {
+    if (dialogOpen && currentStep === steps.length - 1) {
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 }
       });
     }
-  }, [currentStep]);
+  }, [currentStep, dialogOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -79,11 +81,12 @@ export function OnboardingDialog({ open, onOpenChange }: { open: boolean; onOpen
       setCurrentStep(currentStep + 1);
     } else {
       onOpenChange(false);
+      setDialogOpen(null);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => { onOpenChange(open); setDialogOpen(open ? 'true' : null); }}>
       <DialogTitle></DialogTitle>
       <DialogContent showOverlay className="sm:max-w-[690px] mx-auto bg-panelLight dark:bg-[#111111] w-full rounded-xl p-4 border">
         <div className="flex flex-col p-6 gap-6">
