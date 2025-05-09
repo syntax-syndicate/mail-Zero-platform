@@ -46,9 +46,9 @@ const renderThread = (thread: { id: string; title: string; snippet: string }) =>
           </Avatar>
           <div className="flex w-full flex-col gap-1.5">
             <div className="flex w-full items-center justify-between gap-2">
-              <p className="text-sm font-medium text-black dark:text-white">
+              <span className="text-sm max-w-[10ch] truncate font-medium text-black dark:text-white">
                 {getThread.latest?.sender?.name}
-              </p>
+              </span>
               <span className="max-w-[180px] truncate text-xs text-[#8C8C8C] dark:text-[#8C8C8C]">
                 {getThread.latest.receivedOn ? format(getThread.latest.receivedOn, 'MMMM do') : ''}
               </span>

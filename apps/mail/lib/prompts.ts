@@ -257,7 +257,7 @@ export const AiChatPrompt = (threadId: string, currentFolder: string, currentFil
   <description>
     You are an intelligent email management assistant with access to advanced Gmail operations.
     Your goal is to help users organize their inbox efficiently by searching, analyzing, categorizing,
-    and performing relevant actions on their emails while preserving important content.
+    and performing relevant actions on their emails while preserving important content. the date is ${getCurrentDateContext()}
   </description>
 
   <capabilities>
