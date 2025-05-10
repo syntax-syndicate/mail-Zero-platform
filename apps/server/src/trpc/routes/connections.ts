@@ -45,19 +45,24 @@ export const connectionsRouter = router({
         smtpHost, smtpPort, smtpSecure 
       } = input;
       
-      // Test IMAP connection
-      const imapResult = await testImapConnection(imapHost, imapPort, imapSecure, email, password);
-      
-      // Test SMTP connection only if IMAP succeeds
-      let smtpResult: { success: boolean; error?: string } = { 
-        success: false, 
-        error: "SMTP test skipped due to IMAP failure" 
-      };
-      
-      if (imapResult.success) {
-        smtpResult = await testSmtpConnection(smtpHost, smtpPort, smtpSecure, email, password);
-      }
-      
+      // Test both IMAP and SMTP connections independently
+      const [imapResult, smtpResult] = await Promise.all([
+        testImapConnection(
+          input.imapHost,
+          input.imapPort,
+          input.imapSecure,
+          input.email,
+          input.password
+        ),
+        testSmtpConnection(
+          input.smtpHost,
+          input.smtpPort,
+          input.smtpSecure,
+          input.email,
+          input.password
+        )
+      ]);
+
       return {
         imapTest: imapResult,
         smtpTest: smtpResult,

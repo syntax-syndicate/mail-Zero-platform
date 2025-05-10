@@ -79,7 +79,7 @@ export class ImapSmtpMailManager implements MailManager {
 
     // Initialize SMTP transport with separate SMTP settings if available
     const { smtpHost, smtpPort, smtpSecure } = this.parseSmtpInfo(config as ExtendedManagerConfig);
-    
+
     this.smtpTransport = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
@@ -101,15 +101,18 @@ export class ImapSmtpMailManager implements MailManager {
       pass: config.auth.refreshToken, // Use the refreshToken field as password
     };
   }
-  
+
   private parseSmtpInfo(config: ExtendedManagerConfig) {
     // Extract SMTP-specific settings with fallbacks
     const imapPort = config.auth.port ? parseInt(config.auth.port) : 993;
-    
+
     return {
       smtpHost: config.auth.smtpHost || config.auth.host || '',
       smtpPort: config.auth.smtpPort ? parseInt(config.auth.smtpPort) : this.getSmtpPort(imapPort),
-      smtpSecure: config.auth.smtpSecure !== undefined ? config.auth.smtpSecure : this.getSmtpSecure(imapPort),
+      smtpSecure:
+        config.auth.smtpSecure !== undefined
+          ? config.auth.smtpSecure
+          : this.getSmtpSecure(imapPort),
     };
   }
 
@@ -140,9 +143,11 @@ export class ImapSmtpMailManager implements MailManager {
     if (!this.imapConnected) {
       try {
         // Log connection attempt
-        const { host, port, secure } = this.parseConnectionInfo(this.config as ExtendedManagerConfig);
+        const { host, port, secure } = this.parseConnectionInfo(
+          this.config as ExtendedManagerConfig,
+        );
         console.log('Attempting IMAP connection to:', host, 'port:', port, 'secure:', secure);
-        
+
         await this.imapClient.connect();
         console.log('IMAP connection successful!');
         this.imapConnected = true;
