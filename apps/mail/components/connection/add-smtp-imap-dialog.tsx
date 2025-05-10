@@ -1,21 +1,28 @@
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '../ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InfoIcon, Loader2, Mail, CheckCircle, XCircle } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { authClient } from '@/lib/auth-client';
 import { useTRPC } from '@/providers/query-provider';
 import { useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
+import { authClient } from '@/lib/auth-client';
 import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { toast } from 'sonner';
 import { z } from 'zod';
-import React, { useState } from 'react';
-import { AlertCircle, Check, InfoIcon, Loader2, Mail, X } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { usePathname, useRouter } from 'next/navigation';
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 type Props = {
   open: boolean;
@@ -25,9 +32,25 @@ type Props = {
 type ConnectionMethod = 'manual' | 'oauth';
 
 // Map our internal provider IDs to better-auth compatible provider IDs
-type OAuthProviderId = 'google' | 'microsoft' | 'github' | 'apple' | 'discord' | 'facebook' | 
-  'spotify' | 'twitch' | 'twitter' | 'dropbox' | 'kick' | 'linkedin' | 'gitlab' | 
-  'tiktok' | 'reddit' | 'roblox' | 'vk' | 'zoom';
+type OAuthProviderId =
+  | 'google'
+  | 'microsoft'
+  | 'github'
+  | 'apple'
+  | 'discord'
+  | 'facebook'
+  | 'spotify'
+  | 'twitch'
+  | 'twitter'
+  | 'dropbox'
+  | 'kick'
+  | 'linkedin'
+  | 'gitlab'
+  | 'tiktok'
+  | 'reddit'
+  | 'roblox'
+  | 'vk'
+  | 'zoom';
 
 type EmailProvider = {
   id: string;
@@ -52,7 +75,10 @@ const COMMON_EMAIL_PROVIDERS: EmailProvider[] = [
     name: 'Gmail',
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path fill="currentColor" d="M11.99 13.9v-3.72h9.36c.14.63.25 1.22.25 2.05c0 5.71-3.83 9.77-9.6 9.77c-5.52 0-10-4.48-10-10S6.48 2 12 2c2.7 0 4.96.99 6.69 2.61l-2.84 2.76c-.72-.68-1.98-1.48-3.85-1.48c-3.31 0-6.01 2.75-6.01 6.12s2.7 6.12 6.01 6.12c3.83 0 5.24-2.65 5.5-4.22h-5.51z" />
+        <path
+          fill="currentColor"
+          d="M11.99 13.9v-3.72h9.36c.14.63.25 1.22.25 2.05c0 5.71-3.83 9.77-9.6 9.77c-5.52 0-10-4.48-10-10S6.48 2 12 2c2.7 0 4.96.99 6.69 2.61l-2.84 2.76c-.72-.68-1.98-1.48-3.85-1.48c-3.31 0-6.01 2.75-6.01 6.12s2.7 6.12 6.01 6.12c3.83 0 5.24-2.65 5.5-4.22h-5.51z"
+        />
       </svg>
     ),
     oauthSupported: true,
@@ -141,13 +167,13 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
   const router = useRouter();
   const trpc = useTRPC();
   const { mutateAsync: addImapSmtpConnection } = useMutation(
-    trpc.connections.addImapSmtpConnection.mutationOptions()
+    trpc.connections.addImapSmtpConnection.mutationOptions(),
   );
-  
+
   const { mutateAsync: testConnection } = useMutation(
-    trpc.connections.testConnection.mutationOptions()
+    trpc.connections.testConnection.mutationOptions(),
   );
-  
+
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResults, setTestResults] = useState<{
     success?: boolean;
@@ -158,28 +184,28 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      refreshToken: '',
-      imapHost: '',
+      email: 'akx9@icloud.com',
+      refreshToken: 'ykut-kszd-ozfd-zpvm', // App-specific password should be entered by user
+      imapHost: 'imap.mail.me.com',
       imapPort: '993',
       imapSecure: true,
-      smtpHost: '',
-      smtpPort: '465',
-      smtpSecure: true,
+      smtpHost: 'smtp.mail.me.com',
+      smtpPort: '587',
+      smtpSecure: false, // iCloud SMTP requires STARTTLS, not SSL/TLS
     },
   });
 
   // Update form values when provider is selected
   const handleProviderSelect = (provider: EmailProvider) => {
     setSelectedProvider(provider);
-    
+
     // If the provider has OAuth support, set connection method to OAuth
     if (provider.oauthSupported) {
       setConnectionMethod('oauth');
     } else {
       setConnectionMethod('manual');
     }
-    
+
     // If provider has default config, update the form values
     if (provider.defaultConfig) {
       form.setValue('imapHost', provider.defaultConfig.imapHost);
@@ -193,21 +219,23 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
 
   // Handle OAuth authentication
   const handleOAuthConnect = async () => {
-    if (!selectedProvider || !selectedProvider.oauthSupported || !selectedProvider.oauthProviderId) return;
-    
+    if (!selectedProvider || !selectedProvider.oauthSupported || !selectedProvider.oauthProviderId)
+      return;
+
     try {
       setIsSubmitting(true);
-      
+
       // Use better-auth to link the social account
       await authClient.linkSocial({
         provider: selectedProvider.oauthProviderId,
         callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/${pathname}?provider=${selectedProvider.id}`,
         // Add specific scopes for IMAP/SMTP access
-        scopes: selectedProvider.id === 'gmail' ? 
-          ['https://mail.google.com/'] : // Gmail specific scope for full mail access
-          ['Mail.ReadWrite', 'Mail.Send', 'offline_access'], // Microsoft specific scopes
+        scopes:
+          selectedProvider.id === 'gmail'
+            ? ['https://mail.google.com/'] // Gmail specific scope for full mail access
+            : ['Mail.ReadWrite', 'Mail.Send', 'offline_access'], // Microsoft specific scopes
       });
-      
+
       // Note: The actual connection will happen after OAuth redirect
       // We don't need to handle it here since the callback will manage it
     } catch (error) {
@@ -221,7 +249,7 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
   const handleTestConnection = async (data: FormValues) => {
     setIsTestingConnection(true);
     setTestResults(null);
-    
+
     try {
       // Test the connection using the tRPC endpoint
       const results = await testConnection({
@@ -234,9 +262,9 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
         smtpPort: data.smtpPort,
         smtpSecure: data.smtpSecure,
       });
-      
+
       setTestResults(results);
-      
+
       if (results.success) {
         toast.success('Connection test successful! Both IMAP and SMTP connections work.');
       } else {
@@ -275,7 +303,7 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
 
       toast.success('Your email account has been connected to Zero.');
       onOpenChange(false);
-      
+
       // Refresh the page to show the new connection
       router.refresh();
     } catch (error) {
@@ -319,7 +347,10 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
             {selectedProvider.oauthSupported && (
               <div className="mb-6">
                 <h3 className="mb-3 text-sm font-medium">Connection Method</h3>
-                <Tabs value={connectionMethod} onValueChange={(v) => setConnectionMethod(v as ConnectionMethod)}>
+                <Tabs
+                  value={connectionMethod}
+                  onValueChange={(v) => setConnectionMethod(v as ConnectionMethod)}
+                >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="oauth">OAuth (Recommended)</TabsTrigger>
                     <TabsTrigger value="manual">Manual Setup</TabsTrigger>
@@ -333,13 +364,13 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
               <div className="space-y-6">
                 <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
                   <h3 className="mb-2 text-sm font-medium">Benefits of OAuth</h3>
-                  <ul className="ml-5 list-disc text-sm text-muted-foreground">
+                  <ul className="text-muted-foreground ml-5 list-disc text-sm">
                     <li>More secure - no need to store passwords</li>
                     <li>Easier to set up - no manual configuration</li>
                     <li>Maintains compatibility with 2FA</li>
                   </ul>
                 </div>
-                
+
                 <Button
                   type="button"
                   className="w-full"
@@ -360,12 +391,212 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
                     control={form.control}
                     name="email"
                     render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your.email@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="refreshToken"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Password
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <InfoIcon className="text-muted-foreground ml-2 h-4 w-4" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>This is your email account password or app password</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          For Gmail or other services with 2FA, use an app password.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Tabs defaultValue="imap" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="imap">IMAP Settings</TabsTrigger>
+                      <TabsTrigger value="smtp">SMTP Settings</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="imap" className="space-y-4 pt-4">
+                      <FormField
+                        control={form.control}
+                        name="imapHost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IMAP Host</FormLabel>
+                            <FormControl>
+                              <Input placeholder="imap.example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="imapPort"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>IMAP Port</FormLabel>
+                              <FormControl>
+                                <Input placeholder="993" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="imapSecure"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Secure Connection (SSL/TLS)</FormLabel>
+                              <FormControl>
+                                <div className="flex items-center space-x-2">
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    id="imap-secure"
+                                  />
+                                  <label htmlFor="imap-secure">
+                                    {field.value ? 'Enabled' : 'Disabled'}
+                                  </label>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span>{testResults.smtpTest?.success ? '✅' : '❌'}</span>
-                        <span>SMTP: {testResults.smtpTest?.success ? 'Connected' : testResults.smtpTest?.error || 'Failed'}</span>
+                    </TabsContent>
+
+                    <TabsContent value="smtp" className="space-y-4 pt-4">
+                      <FormField
+                        control={form.control}
+                        name="smtpHost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>SMTP Host</FormLabel>
+                            <FormControl>
+                              <Input placeholder="smtp.example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="smtpPort"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>SMTP Port</FormLabel>
+                              <FormControl>
+                                <Input placeholder="465" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="smtpSecure"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Secure Connection (SSL/TLS)</FormLabel>
+                              <FormControl>
+                                <div className="flex items-center space-x-2">
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    id="smtp-secure"
+                                  />
+                                  <label htmlFor="smtp-secure">
+                                    {field.value ? 'Enabled' : 'Disabled'}
+                                  </label>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Test Connection Results */}
+                  {testResults && (
+                    <div className="mt-4 rounded-md border border-gray-200 p-3 dark:border-gray-800">
+                      <h4 className="mb-2 text-sm font-medium">Connection Test Results</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1">
+                          {testResults.imapTest?.success ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                          <span>
+                            IMAP:{' '}
+                            {testResults.imapTest?.success
+                              ? 'Connected'
+                              : testResults.imapTest?.error || 'Failed'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {testResults.smtpTest?.success ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                          <span>
+                            SMTP:{' '}
+                            {testResults.smtpTest?.success
+                              ? 'Connected'
+                              : testResults.smtpTest?.error || 'Failed'}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleTestConnection(form.getValues())}
+                      disabled={isTestingConnection || isSubmitting}
+                    >
+                      {isTestingConnection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Test Connection
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting || isTestingConnection}>
+                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Connect Email
+                    </Button>
                   </div>
                 </form>
               </Form>
