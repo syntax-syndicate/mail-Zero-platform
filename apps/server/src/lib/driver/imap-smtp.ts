@@ -28,6 +28,9 @@ type ExtendedAuthConfig = {
   host?: string;
   port?: string;
   secure?: boolean;
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpSecure?: boolean;
 };
 
 type ExtendedManagerConfig = {
@@ -74,11 +77,13 @@ export class ImapSmtpMailManager implements MailManager {
       logger: false, // Set to true for debugging
     });
 
-    // Initialize SMTP transport
+    // Initialize SMTP transport with separate SMTP settings if available
+    const { smtpHost, smtpPort, smtpSecure } = this.parseSmtpInfo(config as ExtendedManagerConfig);
+    
     this.smtpTransport = nodemailer.createTransport({
-      host,
-      port: this.getSmtpPort(port),
-      secure: this.getSmtpSecure(port),
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
       auth: {
         user,
         pass,
@@ -94,6 +99,17 @@ export class ImapSmtpMailManager implements MailManager {
       secure: config.auth.secure !== undefined ? config.auth.secure : true,
       user: config.auth.email,
       pass: config.auth.refreshToken, // Use the refreshToken field as password
+    };
+  }
+  
+  private parseSmtpInfo(config: ExtendedManagerConfig) {
+    // Extract SMTP-specific settings with fallbacks
+    const imapPort = config.auth.port ? parseInt(config.auth.port) : 993;
+    
+    return {
+      smtpHost: config.auth.smtpHost || config.auth.host || '',
+      smtpPort: config.auth.smtpPort ? parseInt(config.auth.smtpPort) : this.getSmtpPort(imapPort),
+      smtpSecure: config.auth.smtpSecure !== undefined ? config.auth.smtpSecure : this.getSmtpSecure(imapPort),
     };
   }
 
@@ -123,7 +139,12 @@ export class ImapSmtpMailManager implements MailManager {
   private async ensureImapConnection(): Promise<void> {
     if (!this.imapConnected) {
       try {
+        // Log connection attempt
+        const { host, port, secure } = this.parseConnectionInfo(this.config as ExtendedManagerConfig);
+        console.log('Attempting IMAP connection to:', host, 'port:', port, 'secure:', secure);
+        
         await this.imapClient.connect();
+        console.log('IMAP connection successful!');
         this.imapConnected = true;
       } catch (error) {
         console.error('Failed to connect to IMAP server:', error);
