@@ -1,3 +1,4 @@
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 
@@ -7,25 +8,27 @@ export async function testImapConnection(
   secure: boolean,
   user: string,
   pass: string,
+  useTLS?: boolean,
 ): Promise<{ success: boolean; error?: string }> {
   let imapClient: ImapFlow | null = null;
 
   try {
-    console.log(`Testing IMAP connection to ${host}:${port} (secure: ${secure}) for user ${user}`);
+    console.log(
+      `Testing IMAP connection to ${host}:${port} (secure: ${secure}, TLS: ${useTLS}) for user ${user}`,
+    );
 
-    // Increase max listeners on the EventEmitter to avoid memory leak warnings
     require('events').defaultMaxListeners = 20;
 
     imapClient = new ImapFlow({
       host,
       port,
-      secure: true, // Force SSL/TLS for port 993
+      secure, // Use the provided secure parameter
       auth: {
         user,
         pass,
       },
-      logger: console,
-      emitLogs: true,
+      logger: false, // Disable logger to reduce noise
+      emitLogs: false, // Disable log emission for cleaner output
       disableAutoIdle: true,
     });
 
@@ -33,9 +36,8 @@ export async function testImapConnection(
       throw new Error('Failed to initialize IMAP client');
     }
 
-    const client = imapClient; // Create a non-null reference
+    const client = imapClient;
 
-    // Try to connect with a longer timeout for initial connection
     const connectPromise = new Promise<void>(async (resolve, reject) => {
       try {
         await client.connect();
@@ -45,25 +47,30 @@ export async function testImapConnection(
       }
     });
 
-    // Set a shorter timeout for initial connection
-    await Promise.race([
-      connectPromise,
-      new Promise((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error('IMAP connection timeout - Please check your credentials and try again'),
-            ),
-          15000, // Reduced timeout to 15 seconds
+    try {
+      // Use a much shorter timeout for just the connection attempt
+      await Promise.race([
+        connectPromise,
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error('IMAP connection timeout - Please check your credentials and try again'),
+              ),
+            10000, // Reduced timeout for just the initial connection
+          ),
         ),
-      ),
-    ]);
+      ]);
 
-    console.log('IMAP connection successful!');
+      // If we get here, connection was successful
+      console.log('IMAP connection established successfully!');
 
-    // Since we successfully connected and authenticated, return success
-    // We don't need to list mailboxes just to verify the connection
-    return { success: true };
+      // Skip additional operations after authentication to avoid timeouts
+      return { success: true };
+    } catch (error) {
+      console.error('IMAP connection setup error:', error);
+      throw error; // Re-throw to be caught by the outer try/catch
+    }
   } catch (error) {
     console.error('IMAP connection test failed:', error);
     return {
@@ -71,7 +78,6 @@ export async function testImapConnection(
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   } finally {
-    // Always make sure to close the connection to prevent memory leaks
     if (imapClient) {
       try {
         await imapClient.logout();
@@ -89,36 +95,33 @@ export async function testSmtpConnection(
   secure: boolean,
   user: string,
   pass: string,
+  useTLS?: boolean,
 ): Promise<{ success: boolean; error?: string }> {
-  // Don't skip SMTP test even if IMAP fails
-  console.log(`Testing SMTP connection to ${host}:${port} (secure: ${secure}) for user ${user}`);
+  console.log(
+    `Testing SMTP connection to ${host}:${port} (secure: ${secure}, TLS: ${useTLS}) for user ${user}`,
+  );
   let transport: nodemailer.Transporter | null = null;
 
   try {
-    console.log(`Testing SMTP connection to ${host}:${port} (secure: ${secure}) for user ${user}`);
-
-    // Create a new transport with proper timeouts to prevent hanging connections
-    transport = nodemailer.createTransport({
+    // Configure basic transport
+    const transportConfig: SMTPTransport.Options = {
       host,
       port,
-      secure: false, // Force STARTTLS for port 587
+      secure,
       auth: {
         user,
         pass,
       },
+      // Use shorter timeouts
       connectionTimeout: 10000,
-      greetingTimeout: 5000,
-      socketTimeout: 10000,
-      tls: {
-        rejectUnauthorized: true, // Verify SSL/TLS certificates
-      },
-    });
+      greetingTimeout: 7000,
+      socketTimeout: 7000,
+    };
 
-    // Increase max listeners on the EventEmitter to avoid memory leak warnings
-    // Using require('events') to access the EventEmitter class
-    require('events').defaultMaxListeners = 20;
+    // Create transport
+    transport = nodemailer.createTransport(transportConfig);
 
-    // Verify connection configuration with a timeout
+    // Verify connection with timeout
     await Promise.race([
       transport.verify(),
       new Promise((_, reject) =>
@@ -126,7 +129,7 @@ export async function testSmtpConnection(
       ),
     ]);
 
-    console.log('SMTP connection successful!');
+    console.log('SMTP connection verified successfully!');
     return { success: true };
   } catch (error) {
     console.error('SMTP connection test failed:', error);
@@ -135,7 +138,6 @@ export async function testSmtpConnection(
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   } finally {
-    // Always make sure to close the transport to prevent memory leaks
     if (transport) {
       transport.close();
       transport = null;

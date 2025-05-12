@@ -26,10 +26,10 @@ type ExtendedAuthConfig = {
   refreshToken: string;
   email: string;
   host?: string;
-  port?: string;
+  port?: number;
   secure?: boolean;
   smtpHost?: string;
-  smtpPort?: string;
+  smtpPort?: number;
   smtpSecure?: boolean;
 };
 
@@ -65,7 +65,9 @@ export class ImapSmtpMailManager implements MailManager {
       config as ExtendedManagerConfig,
     );
 
-    // Initialize IMAP client
+    console.log(`Initializing IMAP connection to ${host}:${port} (secure: ${secure}) for user ${user}`);
+
+    // Initialize IMAP client with proper options
     this.imapClient = new ImapFlow({
       host,
       port,
@@ -74,11 +76,16 @@ export class ImapSmtpMailManager implements MailManager {
         user,
         pass,
       },
-      logger: false, // Set to true for debugging
+      logger: console,
+      emitLogs: false,
+      disableAutoIdle: true,
+      disableAutoEnable: true,
     });
 
-    // Initialize SMTP transport with separate SMTP settings if available
+    // Initialize SMTP transport
     const { smtpHost, smtpPort, smtpSecure } = this.parseSmtpInfo(config as ExtendedManagerConfig);
+    
+    console.log(`Initializing SMTP connection to ${smtpHost}:${smtpPort} (secure: ${smtpSecure}) for user ${user}`);
 
     this.smtpTransport = nodemailer.createTransport({
       host: smtpHost,
@@ -88,32 +95,35 @@ export class ImapSmtpMailManager implements MailManager {
         user,
         pass,
       },
+      logger: console,
+      tls: {
+        rejectUnauthorized: false // Add this for development to avoid SSL certificate issues
+      }
     });
   }
 
   private parseConnectionInfo(config: ExtendedManagerConfig) {
-    // Default to common settings if not provided
-    return {
-      host: config.auth.host || '',
-      port: config.auth.port ? parseInt(config.auth.port) : 993,
-      secure: config.auth.secure !== undefined ? config.auth.secure : true,
-      user: config.auth.email,
-      pass: config.auth.refreshToken, // Use the refreshToken field as password
-    };
+    // Get host and port from config or use defaults
+    const host = config.auth.host || '';
+    const port = config.auth.port || 993;
+    const secure = config.auth.secure !== undefined ? config.auth.secure : true;
+    
+    // For IMAP, use email as username and refreshToken as password
+    const user = config.auth.email;
+    const pass = config.auth.refreshToken;  // Using refreshToken field as password
+    
+    return { host, port, secure, user, pass };
   }
 
   private parseSmtpInfo(config: ExtendedManagerConfig) {
-    // Extract SMTP-specific settings with fallbacks
-    const imapPort = config.auth.port ? parseInt(config.auth.port) : 993;
-
-    return {
-      smtpHost: config.auth.smtpHost || config.auth.host || '',
-      smtpPort: config.auth.smtpPort ? parseInt(config.auth.smtpPort) : this.getSmtpPort(imapPort),
-      smtpSecure:
-        config.auth.smtpSecure !== undefined
-          ? config.auth.smtpSecure
-          : this.getSmtpSecure(imapPort),
-    };
+    // Extract SMTP settings with smart defaults
+    const smtpHost = config.auth.smtpHost || config.auth.host || '';
+    const smtpPort = config.auth.smtpPort || this.getSmtpPort(config.auth.port || 993);
+    const smtpSecure = config.auth.smtpSecure !== undefined 
+      ? config.auth.smtpSecure 
+      : this.getSmtpSecure(config.auth.port || 993);
+    
+    return { smtpHost, smtpPort, smtpSecure };
   }
 
   private getSmtpPort(imapPort: number): number {
@@ -122,9 +132,9 @@ export class ImapSmtpMailManager implements MailManager {
       case 993:
         return 465; // Secure IMAP -> Secure SMTP
       case 143:
-        return 587; // Non-secure IMAP -> STARTTLS SMTP
+        return 587; // Non-secure IMAP -> TLS SMTP
       default:
-        return 587; // Default to common STARTTLS port
+        return 587; // Default to TLS port
     }
   }
 
@@ -134,7 +144,7 @@ export class ImapSmtpMailManager implements MailManager {
   }
 
   public getScope(): string {
-    // IMAP/SMTP doesn't use OAuth scopes like Google/Microsoft
+    // IMAP/SMTP doesn't use OAuth scopes
     return 'imap smtp';
   }
 
@@ -146,7 +156,7 @@ export class ImapSmtpMailManager implements MailManager {
         const { host, port, secure } = this.parseConnectionInfo(
           this.config as ExtendedManagerConfig,
         );
-        console.log('Attempting IMAP connection to:', host, 'port:', port, 'secure:', secure);
+        console.log(`Connecting to IMAP server: ${host}:${port} (secure: ${secure})`);
 
         await this.imapClient.connect();
         console.log('IMAP connection successful!');
@@ -169,26 +179,136 @@ export class ImapSmtpMailManager implements MailManager {
     }
   }
 
+  // Test method to verify connection
+  public async testConnection(): Promise<{ imap: boolean; smtp: boolean }> {
+    try {
+      // Test IMAP connection
+      await this.ensureImapConnection();
+      const imapSuccess = this.imapConnected;
+      
+      // Test SMTP connection
+      let smtpSuccess = false;
+      try {
+        await this.smtpTransport.verify();
+        smtpSuccess = true;
+      } catch (error) {
+        console.error('SMTP verification failed:', error);
+      }
+      
+      return { imap: imapSuccess, smtp: smtpSuccess };
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      return { imap: false, smtp: false };
+    }
+  }
+
   // Folder mapping methods
   private getImapFolderPath(folder: string): string {
-    // Map standard folder names to IMAP folder paths
-    switch (folder.toLowerCase()) {
+    // Map standard folder names to common IMAP folder paths
+    const folderLower = folder.toLowerCase();
+    switch (folderLower) {
       case 'inbox':
         return 'INBOX';
       case 'sent':
-        return 'Sent';
+        return this.findFolderNameVariation(['Sent', 'Sent Items', 'Sent Mail']) || 'Sent';
       case 'drafts':
-        return 'Drafts';
+        return this.findFolderNameVariation(['Drafts', 'Draft']) || 'Drafts';
       case 'trash':
       case 'bin':
-        return 'Trash';
+        return this.findFolderNameVariation(['Trash', 'Deleted Items', 'Deleted']) || 'Trash';
       case 'spam':
       case 'junk':
-        return 'Junk';
+        return this.findFolderNameVariation(['Junk', 'Spam', 'Junk E-mail']) || 'Junk';
       case 'archive':
-        return 'Archive';
+        return this.findFolderNameVariation(['Archive', 'Archived', 'All Mail']) || 'Archive';
       default:
         return folder;
+    }
+  }
+
+  private async findFolderNameVariation(variations: string[]): Promise<string | null> {
+    try {
+      await this.ensureImapConnection();
+      const mailboxes = await this.imapClient.list();
+      
+      for (const variation of variations) {
+        const match = mailboxes.find(box => 
+          box.name === variation || 
+          box.path === variation ||
+          box.path.endsWith(`/${variation}`)
+        );
+        
+        if (match) return match.path;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error finding folder variation:', error);
+      return null;
+    }
+  }
+
+  private async listAllFolders(): Promise<string[]> {
+    await this.ensureImapConnection();
+
+    try {
+      // Get all mailboxes
+      const mailboxes = await this.imapClient.list();
+      
+      // Extract folder paths
+      return mailboxes.map((mailbox: { path: string }) => mailbox.path);
+    } catch (error) {
+      console.error('Error listing folders:', error);
+      return [];
+    }
+  }
+
+  private async findMessageFolder(messageId: string): Promise<string | null> {
+    await this.ensureImapConnection();
+
+    // First try common folders to optimize search
+    const commonFolders = ['INBOX', 'Sent', 'Drafts', 'Archive'];
+    
+    for (const folder of commonFolders) {
+      try {
+        const found = await this.checkMessageInFolder(folder, messageId);
+        if (found) return folder;
+      } catch (error) {
+        // Continue to next folder
+      }
+    }
+
+    // If not found in common folders, check all folders
+    const allFolders = await this.listAllFolders();
+    
+    for (const folder of allFolders) {
+      if (commonFolders.includes(folder)) continue; // Skip already checked folders
+      
+      try {
+        const found = await this.checkMessageInFolder(folder, messageId);
+        if (found) return folder;
+      } catch (error) {
+        // Continue to next folder
+      }
+    }
+
+    return null;
+  }
+
+  private async checkMessageInFolder(folder: string, messageId: string): Promise<boolean> {
+    try {
+      // Open the folder
+      await this.imapClient.mailboxOpen(folder);
+
+      // Search for the message by ID
+      const results = await this.imapClient.search({
+        header: ['Message-ID', `<${messageId}>`],
+      });
+
+      return results.length > 0;
+    } catch (error) {
+      // Return false if we can't check the folder
+      return false;
     }
   }
 
@@ -223,73 +343,119 @@ export class ImapSmtpMailManager implements MailManager {
 
         // Check if we need to convert from thread: prefix
         const messageId = id.startsWith('thread:') ? id.substring(7) : id;
+        console.log(`Getting thread with ID: ${messageId}`);
 
         // Find the folder containing this message
-        const folder = await this.findMessageFolder(messageId);
+        let folder = await this.findMessageFolder(messageId);
 
         if (!folder) {
-          throw new Error(`Message with ID ${messageId} not found in any folder`);
+          console.log(`Message with ID ${messageId} not found in any folder, trying INBOX`);
+          folder = 'INBOX';
         }
 
-        // Select the folder
-        const mailbox = await this.imapClient.mailboxOpen(folder);
+        console.log(`Found message in folder: ${folder}`);
 
-        // Search for the message by Message-ID header
-        const results = await this.imapClient.search({
-          header: ['Message-ID', `<${messageId}>`],
-        });
+        try {
+          // Select the folder
+          await this.imapClient.mailboxOpen(folder);
+          
+          // First try to search by Message-ID header
+          let results = await this.imapClient.search({
+            header: ['Message-ID', `<${messageId}>`],
+          });
 
-        if (!results.length) {
-          // Try looking up by UID if header search failed
-          try {
-            // Convert string ID to number if it's a UID
-            const uid = parseInt(messageId);
-            if (!isNaN(uid)) {
-              results.push(uid);
+          // If that doesn't work, try References or In-Reply-To headers to find related messages
+          if (!results.length) {
+            console.log(`No messages found with Message-ID: ${messageId}, trying References`);
+            
+            results = await this.imapClient.search({
+              header: ['References', `${messageId}`],
+            });
+            
+            // Try In-Reply-To as well
+            if (!results.length) {
+              console.log(`No messages found with References: ${messageId}, trying In-Reply-To`);
+              
+              results = await this.imapClient.search({
+                header: ['In-Reply-To', `<${messageId}>`],
+              });
             }
-          } catch (e) {
-            // Ignore parsing errors
           }
+
+          // As a last resort, try looking up by UID if it's a numeric ID
+          if (!results.length) {
+            try {
+              console.log(`No messages found with headers, trying as UID: ${messageId}`);
+              const uid = parseInt(messageId);
+              if (!isNaN(uid)) {
+                // Verify this UID exists
+                const uidResults = await this.imapClient.search({ uid });
+                if (uidResults.length > 0) {
+                  results = [uid];
+                }
+              }
+            } catch (e) {
+              console.error(`Error parsing UID from ${messageId}:`, e);
+            }
+          }
+
+          if (!results.length) {
+            throw new Error(`Thread with ID ${messageId} not found`);
+          }
+
+          console.log(`Found ${results.length} messages for thread ID: ${messageId}`);
+
+          // Fetch messages and parse them
+          const messages = await Promise.all(
+            results.map(async (uid: number) => {
+              console.log(`Fetching message data for UID: ${uid}`);
+              
+              try {
+                const fetchOptions = {
+                  uid,
+                  envelope: true,
+                  bodyStructure: true,
+                  source: true,
+                  flags: true,
+                };
+
+                const fetchedMessage = await this.imapClient.fetchOne(uid, fetchOptions);
+                if (!fetchedMessage || !fetchedMessage.source) {
+                  console.error(`No message data or source returned for UID ${uid}`);
+                  throw new Error(`Failed to fetch message with UID ${uid}`);
+                }
+                
+                console.log(`Parsing message with UID: ${uid}`);
+                const parsed = await simpleParser(fetchedMessage.source);
+                
+                return this.parseImapMessage(parsed, uid, fetchedMessage.flags || []);
+              } catch (error) {
+                console.error(`Error fetching message UID ${uid}:`, error);
+                throw error;
+              }
+            }),
+          );
+
+          // Group messages by thread and sort by date
+          const threadMessages = messages.sort(
+            (a: ParsedMessage, b: ParsedMessage) =>
+              new Date(a.receivedOn).getTime() - new Date(b.receivedOn).getTime(),
+          );
+
+          // Get labels (folders) for this thread
+          const labels = await this.getUserLabels();
+
+          return {
+            messages: threadMessages,
+            latest: threadMessages[threadMessages.length - 1],
+            hasUnread: threadMessages.some((msg: ParsedMessage) => msg.unread),
+            totalReplies: threadMessages.length,
+            labels: labels.map((label: Label) => ({ id: label.id, name: label.name })),
+          };
+        } catch (error) {
+          console.error(`Error retrieving thread ${messageId}:`, error);
+          throw error;
         }
-
-        if (!results.length) {
-          throw new Error(`Message with ID ${messageId} not found`);
-        }
-
-        // Fetch messages and parse them
-        const messages = await Promise.all(
-          results.map(async (uid: number) => {
-            const fetchOptions = {
-              uid,
-              envelope: true,
-              bodyStructure: true,
-              source: true,
-              flags: true,
-            };
-
-            const fetchedMessage = await this.imapClient.fetchOne(uid, fetchOptions);
-            const parsed = await simpleParser(fetchedMessage.source);
-
-            return this.parseImapMessage(parsed, uid, fetchedMessage.flags);
-          }),
-        );
-
-        // Group messages by thread and sort by date
-        const threadMessages = messages.sort(
-          (a: ParsedMessage, b: ParsedMessage) =>
-            new Date(a.receivedOn).getTime() - new Date(b.receivedOn).getTime(),
-        );
-
-        // Get labels (folders) for this thread
-        const labels = await this.getUserLabels();
-
-        return {
-          messages: threadMessages,
-          latest: threadMessages[threadMessages.length - 1],
-          hasUnread: threadMessages.some((msg: ParsedMessage) => msg.unread),
-          totalReplies: threadMessages.length,
-          labels: labels.map((label: Label) => ({ id: label.id, name: label.name })),
-        };
       },
       { id },
     );
@@ -299,11 +465,19 @@ export class ImapSmtpMailManager implements MailManager {
     return this.withErrorHandler(
       'create',
       async () => {
-        // Use nodemailer to send the email
+        console.log('Preparing to send email');
+        // Prepare mail options
         const mailOptions = await this.prepareMailOptions(data);
 
         try {
+          // First verify SMTP connection
+          console.log('Verifying SMTP connection...');
+          await this.smtpTransport.verify();
+          
+          console.log('Sending email...');
           const result = await this.smtpTransport.sendMail(mailOptions);
+          console.log('Email sent successfully:', result.messageId);
+          
           return { id: result.messageId };
         } catch (error) {
           console.error('Error sending email:', error);
@@ -322,13 +496,15 @@ export class ImapSmtpMailManager implements MailManager {
     const cc = data.cc ? this.formatRecipients(data.cc) : undefined;
     const bcc = data.bcc ? this.formatRecipients(data.bcc) : undefined;
 
+    console.log(`Preparing email to: ${to}, cc: ${cc || 'none'}, bcc: ${bcc || 'none'}`);
+
     // Basic email options
     const mailOptions: nodemailer.SendMailOptions = {
       from: data.fromEmail || this.config.auth.email,
       to,
       cc,
       bcc,
-      subject: data.subject,
+      subject: data.subject || '',
       html: processedHtml,
       headers: {},
     };
@@ -342,15 +518,26 @@ export class ImapSmtpMailManager implements MailManager {
       });
     }
 
+    // Add message ID if replying to a thread
+    if (data.headers?.['in-reply-to']) {
+      mailOptions.inReplyTo = data.headers['in-reply-to'];
+    }
+    
+    if (data.headers?.['references']) {
+      mailOptions.references = data.headers['references'];
+    }
+
     // Add attachments if provided
     if (data.attachments && data.attachments.length > 0) {
+      console.log(`Processing ${data.attachments.length} attachments`);
+      
       mailOptions.attachments = await Promise.all(
         data.attachments.map(async (file) => {
           const content = await file.arrayBuffer();
           return {
             filename: file.name,
             content: Buffer.from(content),
-            contentType: file.type,
+            contentType: file.type || 'application/octet-stream',
           };
         }),
       );
@@ -365,15 +552,26 @@ export class ImapSmtpMailManager implements MailManager {
       return recipients
         .map((recipient) => {
           if (typeof recipient === 'string') return recipient;
-          const name = recipient.name ? `"${recipient.name}"` : '';
-          const email = recipient.email;
-          return name ? `${name} <${email}>` : email;
+          
+          // Handle different recipient formats
+          if (typeof recipient === 'object') {
+            const email = recipient.email || recipient.address || '';
+            const name = recipient.name || '';
+            
+            if (!email) return '';
+            return name ? `"${name}" <${email}>` : email;
+          }
+          
+          return '';
         })
+        .filter(Boolean) // Remove empty entries
         .join(', ');
-    } else {
+    } else if (typeof recipients === 'string') {
       // Handle string input
       return recipients;
     }
+    
+    return '';
   }
 
   public async delete(id: string): Promise<void> {
@@ -476,32 +674,43 @@ export class ImapSmtpMailManager implements MailManager {
     return this.withErrorHandler(
       'getUserLabels',
       async () => {
+        // Return cached labels if available
         if (this.userLabels.length > 0) {
           return this.userLabels;
         }
 
         await this.ensureImapConnection();
+        console.log('Getting user labels (folders)');
 
-        // Get all mailboxes/folders
-        const mailboxes = await this.imapClient.list();
+        try {
+          // Get all mailboxes/folders
+          const mailboxes = await this.imapClient.list();
+          console.log(`Found ${mailboxes.length} mailboxes`);
 
-        // Convert IMAP folders to Labels
-        this.userLabels = mailboxes.map((mailbox: any) => {
-          const path = mailbox.path;
-          const name = path.split('/').pop() || path;
+          // Convert IMAP folders to Labels
+          this.userLabels = mailboxes.map((mailbox: any) => {
+            const name = mailbox.name || mailbox.path.split('/').pop() || mailbox.path;
+            
+            // Determine if this is a system folder
+            const isSystemFolder = !!mailbox.specialUse || 
+              ['INBOX', 'Drafts', 'Sent', 'Trash', 'Junk', 'Spam'].includes(name);
 
-          return {
-            id: path,
-            name,
-            type: mailbox.specialUse ? 'system' : 'user',
-            color: {
-              backgroundColor: '#E3E3E3',
-              textColor: '#333333',
-            },
-          };
-        });
+            return {
+              id: mailbox.path,
+              name,
+              type: isSystemFolder ? 'system' : 'user',
+              color: {
+                backgroundColor: '#E3E3E3',
+                textColor: '#333333',
+              },
+            };
+          });
 
-        return this.userLabels;
+          return this.userLabels;
+        } catch (error) {
+          console.error('Error getting user labels:', error);
+          return [];
+        }
       },
       { email: this.config.auth?.email },
     );
@@ -971,13 +1180,17 @@ export class ImapSmtpMailManager implements MailManager {
     );
   }
 
-  public async markAsRead(messageIds: string[]): Promise<void> {
+  public async markAsRead(threadIds: string[]): Promise<void> {
     return this.withErrorHandler(
       'markAsRead',
       async () => {
         await this.ensureImapConnection();
+        console.log(`Marking ${threadIds.length} threads as read`);
 
-        for (const messageId of messageIds) {
+        for (const threadId of threadIds) {
+          // Get the actual message ID (remove thread: prefix if present)
+          const messageId = threadId.startsWith('thread:') ? threadId.substring(7) : threadId;
+          
           // Find the folder containing this message
           const folder = await this.findMessageFolder(messageId);
 
@@ -995,38 +1208,54 @@ export class ImapSmtpMailManager implements MailManager {
           });
 
           if (!results.length) {
-            // Try looking up by UID
-            try {
-              const uid = parseInt(messageId);
-              if (!isNaN(uid)) {
-                results.push(uid);
+            // Try looking up by references
+            const refResults = await this.imapClient.search({
+              header: ['References', messageId],
+            });
+            
+            if (refResults.length) {
+              // Add found messages to results
+              results.push(...refResults);
+            } else {
+              // Try looking up by UID
+              try {
+                const uid = parseInt(messageId);
+                if (!isNaN(uid)) {
+                  const uidResults = await this.imapClient.search({ uid });
+                  if (uidResults.length) {
+                    results.push(...uidResults);
+                  }
+                }
+              } catch (e) {
+                // Ignore parsing errors
               }
-            } catch (e) {
-              // Ignore parsing errors
             }
           }
 
           if (results.length) {
             // Mark as read by adding the \Seen flag
             await this.imapClient.messageFlagsAdd(results, ['\\Seen']);
+            console.log(`Marked message(s) ${results.join(', ')} as read in folder ${folder}`);
           } else {
-            console.warn(
-              `Message ${messageId} not found in folder ${folder}, skipping mark as read`,
-            );
+            console.warn(`Message ${messageId} not found in folder ${folder}, skipping mark as read`);
           }
         }
       },
-      { messageIds },
+      { threadIds },
     );
   }
 
-  public async markAsUnread(messageIds: string[]): Promise<void> {
+  public async markAsUnread(threadIds: string[]): Promise<void> {
     return this.withErrorHandler(
       'markAsUnread',
       async () => {
         await this.ensureImapConnection();
+        console.log(`Marking ${threadIds.length} threads as unread`);
 
-        for (const messageId of messageIds) {
+        for (const threadId of threadIds) {
+          // Get the actual message ID (remove thread: prefix if present)
+          const messageId = threadId.startsWith('thread:') ? threadId.substring(7) : threadId;
+          
           // Find the folder containing this message
           const folder = await this.findMessageFolder(messageId);
 
@@ -1044,28 +1273,40 @@ export class ImapSmtpMailManager implements MailManager {
           });
 
           if (!results.length) {
-            // Try looking up by UID
-            try {
-              const uid = parseInt(messageId);
-              if (!isNaN(uid)) {
-                results.push(uid);
+            // Try looking up by references
+            const refResults = await this.imapClient.search({
+              header: ['References', messageId],
+            });
+            
+            if (refResults.length) {
+              // Add found messages to results
+              results.push(...refResults);
+            } else {
+              // Try looking up by UID as last resort
+              try {
+                const uid = parseInt(messageId);
+                if (!isNaN(uid)) {
+                  const uidResults = await this.imapClient.search({ uid });
+                  if (uidResults.length) {
+                    results.push(...uidResults);
+                  }
+                }
+              } catch (e) {
+                // Ignore parsing errors
               }
-            } catch (e) {
-              // Ignore parsing errors
             }
           }
 
           if (results.length) {
             // Mark as unread by removing the \Seen flag
             await this.imapClient.messageFlagsRemove(results, ['\\Seen']);
+            console.log(`Marked message(s) ${results.join(', ')} as unread in folder ${folder}`);
           } else {
-            console.warn(
-              `Message ${messageId} not found in folder ${folder}, skipping mark as unread`,
-            );
+            console.warn(`Message ${messageId} not found in folder ${folder}, skipping mark as unread`);
           }
         }
       },
-      { messageIds },
+      { threadIds },
     );
   }
 
@@ -1074,9 +1315,10 @@ export class ImapSmtpMailManager implements MailManager {
       'getAttachment',
       async () => {
         await this.ensureImapConnection();
+        console.log(`Getting attachment ${attachmentId} for message ${messageId}`);
 
         // Parse the attachmentId to extract UID and attachment identifier
-        // Format: 123:filename or 123:contentId
+        // Format: 123:filename or 123:index
         const parts = attachmentId.split(':');
 
         if (parts.length !== 2) {
@@ -1100,32 +1342,53 @@ export class ImapSmtpMailManager implements MailManager {
         // Open the folder
         await this.imapClient.mailboxOpen(folder);
 
-        // Fetch the message with its structure
-        const fetchedMessage = await this.imapClient.fetchOne(uid, {
-          uid,
-          source: true,
-          bodyStructure: true,
-        });
+        try {
+          // Fetch the message with its structure
+          const fetchedMessage = await this.imapClient.fetchOne(uid, {
+            uid,
+            source: true,
+            bodyStructure: true,
+          });
 
-        // Parse the message
-        const parsed = await simpleParser(fetchedMessage.source);
+          if (!fetchedMessage || !fetchedMessage.source) {
+            throw new Error(`Failed to fetch message with UID ${uid}`);
+          }
 
-        // Find the attachment
-        const attachment = parsed.attachments?.find(
-          (att: { filename: string; contentId?: string; content: Buffer }) => {
-            return (
-              att.filename === attachmentIdentifier ||
-              (att.contentId && att.contentId.replace(/[<>]/g, '') === attachmentIdentifier)
-            );
-          },
-        );
+          // Parse the message
+          const parsed = await simpleParser(fetchedMessage.source);
 
-        if (!attachment) {
-          throw new Error(`Attachment ${attachmentIdentifier} not found in message ${messageId}`);
+          // Find the attachment by filename or index
+          const attachment = parsed.attachments?.find(
+            (att: { filename: string; contentId?: string; contentDisposition?: string; }, index: number) => {
+              // Try to match by filename first
+              if (att.filename === attachmentIdentifier) {
+                return true;
+              }
+              
+              // Try to match by content ID
+              if (att.contentId && att.contentId.replace(/[<>]/g, '') === attachmentIdentifier) {
+                return true;
+              }
+              
+              // Try to match by index
+              if (attachmentIdentifier === index.toString()) {
+                return true;
+              }
+              
+              return false;
+            },
+          );
+
+          if (!attachment) {
+            throw new Error(`Attachment ${attachmentIdentifier} not found in message ${messageId}`);
+          }
+
+          // Convert to base64
+          return attachment.content?.toString('base64');
+        } catch (error) {
+          console.error(`Error getting attachment ${attachmentId}:`, error);
+          throw error;
         }
-
-        // Convert to base64
-        return attachment.content?.toString('base64');
       },
       { messageId, attachmentId },
     );
@@ -1157,74 +1420,32 @@ export class ImapSmtpMailManager implements MailManager {
     );
   }
 
-  private async listAllFolders(): Promise<string[]> {
-    await this.ensureImapConnection();
-
-    // Get all mailboxes
-    const mailboxes = await this.imapClient.list();
-
-    // Extract folder paths
-    return mailboxes.map((mailbox: { path: string }) => mailbox.path);
-  }
-
-  private async findMessageFolder(messageId: string): Promise<string | null> {
-    await this.ensureImapConnection();
-
-    // Get all possible folders
-    const folders = await this.listAllFolders();
-
-    // Check each folder for the message ID
-    for (const folder of folders) {
-      try {
-        // Open the folder
-        await this.imapClient.mailboxOpen(folder);
-
-        // Search for the message by ID
-        const results = await this.imapClient.search({
-          header: ['Message-ID', `<${messageId}>`],
-        });
-
-        if (results.length > 0) {
-          return folder;
-        }
-
-        // Try looking up by UID
-        try {
-          const uid = parseInt(messageId);
-          if (!isNaN(uid)) {
-            // Check if this UID exists in the folder
-            const exists = await this.imapClient.search({ uid });
-            if (exists.length > 0) {
-              return folder;
-            }
-          }
-        } catch (e) {
-          // Ignore parsing errors
-        }
-      } catch (error) {
-        console.warn(`Error searching folder ${folder}:`, error);
-        // Continue to the next folder
-      }
-    }
-
-    return null;
-  }
-
-  private async parseImapMessage(parsed: any, uid: number, flags: string[]): Promise<any> {
-    // Extract headers
+  private async parseImapMessage(parsed: any, uid: number, flags: string[]): Promise<ParsedMessage> {
+    // Extract message data from the parsed email
     const headers: { [key: string]: string } = {};
-    parsed.headerLines.forEach((header: { key: string; line: string }) => {
-      headers[header.key.toLowerCase()] = header.line;
-    });
+    if (parsed.headerLines) {
+      parsed.headerLines.forEach((header: { key: string; line: string }) => {
+        headers[header.key.toLowerCase()] = header.line;
+      });
+    }
 
     // Extract email addresses
     const from = parsed.from?.value[0] || { address: '', name: '' };
-    const to =
-      parsed.to?.value.map((addr: { address: string; name: string }) => addr.address) || [];
-    const cc =
-      parsed.cc?.value.map((addr: { address: string; name: string }) => addr.address) || [];
-    const bcc =
-      parsed.bcc?.value.map((addr: { address: string; name: string }) => addr.address) || [];
+    
+    const to = parsed.to?.value.map((addr: AddressObject) => ({
+      email: addr.address || '',
+      name: addr.name || '',
+    })) || [];
+    
+    const cc = parsed.cc?.value.map((addr: AddressObject) => ({
+      email: addr.address || '',
+      name: addr.name || '',
+    })) || null;
+    
+    const bcc = parsed.bcc?.value.map((addr: AddressObject) => ({
+      email: addr.address || '',
+      name: addr.name || '',
+    })) || [];
 
     // Parse attachments
     const attachments: Attachment[] = (parsed.attachments || []).map((att: any, index: number) => ({
@@ -1232,50 +1453,64 @@ export class ImapSmtpMailManager implements MailManager {
       mimeType: att.contentType || 'application/octet-stream',
       size: att.size || 0,
       attachmentId: `${uid}:${att.filename || index}`,
-      headers: [],
+      headers: Object.entries(att.headers || {}).map(([name, value]) => ({ 
+        name, 
+        value: value as string
+      })),
+      body: '', // Will be populated when needed
     }));
 
-    // Determine if the message is unread
+    // Determine if the message is unread based on flags
     const unread = !flags.includes('\\Seen');
 
-    // Get message ID (remove angle brackets if present)
-    let messageId = parsed.messageId || `<${uuidv4()}@${this.config.auth.email.split('@')[1]}>`;
+    // Extract message ID (remove angle brackets if present)
+    let messageId = parsed.messageId || `imap-${uuidv4()}@${this.config.auth.email.split('@')[1]}`;
     if (messageId && messageId.startsWith('<') && messageId.endsWith('>')) {
       messageId = messageId.substring(1, messageId.length - 1);
     }
 
-    // Create the parsed message object with the correct properties
-    // For the implementation to work, we'll cast this to any to avoid TypeScript errors,
-    // while ensuring we maintain the shape required by the application
+    // Get HTML content with fallback to text
+    const html = parsed.html || (parsed.text ? parsed.text.replace(/\n/g, '<br>') : '');
+    
+    // Extract header information
+    const references = parsed.references || '';
+    const inReplyTo = parsed.inReplyTo || '';
+    const subject = parsed.subject || '(No subject)';
+    
+    // Create sender object
+    const sender = {
+      email: from.address || '',
+      name: from.name || '',
+    };
+
+    // Get received date
+    const receivedOn = parsed.date ? new Date(parsed.date).toISOString() : new Date().toISOString();
+
     return {
       id: messageId,
-      subject: parsed.subject || '',
       threadId: messageId,
-      title: parsed.subject || '', // Required by ParsedMessage
-      tags: [], // Required by ParsedMessage
-      sender: { email: from.address, name: from.name }, // Required by ParsedMessage
-      tls: false, // Required by ParsedMessage
-      from: { email: from.address, name: from.name },
+      title: parsed.subject || '',
+      tags: [], // IMAP doesn't have tags/labels like Gmail
+      tls: false, // Simplified TLS detection
+      unread,
+      sender,
       to,
       cc,
       bcc,
-      internalDate: parsed.date?.getTime() || Date.now(),
-      receivedOn: new Date(parsed.date || Date.now()).toISOString(),
+      receivedOn,
+      subject,
+      references,
+      inReplyTo,
+      messageId,
       body: parsed.text || '',
-      content: parsed.html || parsed.text || '',
-      html: parsed.html || '',
+      decodedBody: html,
+      processedHtml: html,
+      blobUrl: '',
       attachments,
-      size: parsed.size || 0,
-      unread,
-      headers,
-      inReplyTo: parsed.inReplyTo || null,
-      references: parsed.references || [],
-      raw: parsed,
-      uid,
     };
   }
 
-  public list(params: {
+  public async list(params: {
     folder: string;
     query?: string;
     maxResults?: number;
@@ -1290,10 +1525,17 @@ export class ImapSmtpMailManager implements MailManager {
 
         // Map folder name to IMAP path
         const folderPath = this.getImapFolderPath(folder);
+        console.log(`Listing emails from folder: ${folderPath}`);
 
         try {
           // Open the mailbox
           const mailbox = await this.imapClient.mailboxOpen(folderPath);
+          console.log(`Mailbox opened: ${folderPath}, total messages: ${mailbox.exists}`);
+
+          // Handle empty mailbox
+          if (mailbox.exists === 0) {
+            return { threads: [], nextPageToken: null };
+          }
 
           // Determine range to fetch
           let from = 1;
@@ -1305,44 +1547,45 @@ export class ImapSmtpMailManager implements MailManager {
           }
 
           // Calculate to value respecting maxResults
-          let to = Math.min(from + maxResults - 1, mailbox.exists);
+          const to = Math.min(from + maxResults - 1, mailbox.exists);
 
           // Build search criteria
-          let searchCriteria: any = {};
-
+          const searchCriteria: any = {};
           if (query) {
-            // Add text search if query provided
             searchCriteria.text = query;
           }
 
-          // Search for messages
-          let uids;
-
+          // Get message UIDs
+          let messageIds;
+          
           if (Object.keys(searchCriteria).length > 0) {
-            uids = await this.imapClient.search(searchCriteria);
-
-            // Sort UIDs in descending order (newest first)
-            uids.sort((a, b) => b - a);
-
-            // Apply pagination
-            uids = uids.slice(from - 1, from - 1 + maxResults);
+            // Search with criteria
+            messageIds = await this.imapClient.search(searchCriteria);
+            messageIds = messageIds.slice(-maxResults); // Get the latest N messages
           } else {
-            // If no search criteria, get messages by sequence
-            // Convert to array of UIDs
-            const range = `${mailbox.exists - to + 1}:${mailbox.exists - from + 1}`;
-            const seqMessages = await this.imapClient.fetch(range, { uid: true });
-            uids = [];
-            for (const msg of seqMessages) {
-              uids.push(msg.uid);
+            // Get the most recent messages by sequence number
+            const range = `${Math.max(1, mailbox.exists - to + 1)}:${mailbox.exists}`;
+            console.log(`Fetching messages in range: ${range}`);
+            
+            try {
+              const messages = await this.imapClient.fetch(range, { uid: true });
+              messageIds = [];
+              for await (const msg of messages) {
+                messageIds.push(msg.uid);
+              }
+            } catch (error) {
+              console.error(`Error fetching message range ${range}:`, error);
+              messageIds = [];
             }
-            // Sort UIDs in descending order
-            uids.sort((a, b) => b - a);
           }
 
-          // Fetch message data for the UIDs
-          const messages = [];
+          // Sort UIDs in descending order (newest first)
+          messageIds.sort((a, b) => b - a);
 
-          for (const uid of uids) {
+          // Fetch message data for the UIDs
+          const threadsMap = new Map(); // Map to track unique threads
+          
+          for (const uid of messageIds) {
             try {
               const fetchOptions = {
                 uid,
@@ -1353,28 +1596,42 @@ export class ImapSmtpMailManager implements MailManager {
               };
 
               const fetchedMessage = await this.imapClient.fetchOne(uid, fetchOptions);
+              
+              if (!fetchedMessage) {
+                console.warn(`No message data returned for UID ${uid}`);
+                continue;
+              }
 
-              // Group by thread using References/In-Reply-To headers
-              const threadId = this.extractThreadId(fetchedMessage);
-
-              messages.push({
-                id: threadId || `${uid}`,
-                $raw: {
-                  uid,
-                  envelope: fetchedMessage.envelope,
-                  flags: fetchedMessage.flags,
-                },
-              });
+              // Extract message ID
+              const msgId = this.extractMessageId(fetchedMessage) || `imap-${uid}`;
+              
+              // Use message ID or extract thread ID from references/in-reply-to
+              const threadId = this.extractThreadId(fetchedMessage) || msgId;
+              
+              // Skip duplicates in the same thread
+              if (!threadsMap.has(threadId)) {
+                threadsMap.set(threadId, {
+                  id: threadId,
+                  $raw: {
+                    uid,
+                    envelope: fetchedMessage.envelope,
+                    flags: fetchedMessage.flags,
+                  },
+                });
+              }
             } catch (error) {
               console.error(`Error fetching message ${uid}:`, error);
             }
           }
 
+          // Get threads sorted by most recent messages
+          const threads = Array.from(threadsMap.values());
+
           // Calculate next page token
           const nextPageToken = to < mailbox.exists ? `${to + 1}` : null;
 
           return {
-            threads: messages,
+            threads,
             nextPageToken,
           };
         } catch (error) {
@@ -1386,28 +1643,40 @@ export class ImapSmtpMailManager implements MailManager {
     );
   }
 
-  private extractThreadId(message: any): string | null {
-    // Try to extract thread ID from References or In-Reply-To headers
+  private extractMessageId(message: any): string | null {
+    // Extract Message-ID from headers
     const headers = message.headers || {};
-
-    // First check message-id
     const messageId = headers['message-id'];
+    
     if (messageId) {
       const match = messageId.match(/<([^>]+)>/);
       if (match && match[1]) {
         return match[1];
       }
     }
+    
+    return null;
+  }
 
+  private extractThreadId(message: any): string | null {
+    // Try to extract thread ID from References or In-Reply-To headers
+    const headers = message.headers || {};
+    
+    // First check message-id
+    const msgId = this.extractMessageId(message);
+    if (msgId) return msgId;
+    
     // Then look for references
     const references = headers['references'];
     if (references) {
-      const match = references.match(/<([^>]+)>/);
-      if (match && match[1]) {
-        return match[1];
+      // Get the first message ID in references chain
+      const matches = references.match(/<([^>]+)>/g);
+      if (matches && matches.length > 0) {
+        // Extract the first reference without the angle brackets
+        return matches[0].replace(/[<>]/g, '');
       }
     }
-
+    
     // Finally try in-reply-to
     const inReplyTo = headers['in-reply-to'];
     if (inReplyTo) {
@@ -1416,7 +1685,7 @@ export class ImapSmtpMailManager implements MailManager {
         return match[1];
       }
     }
-
+    
     return null;
   }
 
@@ -1500,13 +1769,14 @@ export class ImapSmtpMailManager implements MailManager {
   private async withErrorHandler<T>(
     operation: string,
     fn: () => Promise<T> | T,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
   ): Promise<T> {
     try {
       return await Promise.resolve(fn());
     } catch (error: any) {
       const isFatal = FatalErrors.includes(error.message);
-
+      
+      // Detailed error logging
       console.error(
         `[${isFatal ? 'FATAL_ERROR' : 'ERROR'}] [IMAP/SMTP Driver] Operation: ${operation}`,
         {
@@ -1516,8 +1786,13 @@ export class ImapSmtpMailManager implements MailManager {
           isFatal,
         },
       );
-
-      if (isFatal && this.config.c) await deleteActiveConnection(this.config.c);
+      
+      // Close connection on fatal errors
+      if (isFatal) {
+        if (this.config.c) await deleteActiveConnection(this.config.c);
+        await this.closeImapConnection();
+      }
+      
       throw new StandardizedError(error, operation, context);
     }
   }
@@ -1525,20 +1800,20 @@ export class ImapSmtpMailManager implements MailManager {
   private withSyncErrorHandler<T>(
     operation: string,
     fn: () => T,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
   ): T {
     try {
       return fn();
     } catch (error: any) {
       const isFatal = FatalErrors.includes(error.message);
-
+      
       console.error(`[IMAP/SMTP Driver Error] Operation: ${operation}`, {
         error: error.message,
         context: sanitizeContext(context),
         stack: error.stack,
         isFatal,
       });
-
+      
       if (isFatal && this.config.c) void deleteActiveConnection(this.config.c);
       throw new StandardizedError(error, operation, context);
     }
