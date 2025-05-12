@@ -1,3 +1,4 @@
+import { testImapConnection, testSmtpConnection } from '../../lib/debug-connection';
 import { createRateLimiterMiddleware, privateProcedure, router } from '../trpc';
 import { connection, user as user_ } from '@zero/db/schema';
 import { Ratelimit } from '@upstash/ratelimit';
@@ -5,9 +6,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { testImapConnection, testSmtpConnection } from '../../lib/debug-connection';
 
-// Schema for validating IMAP/SMTP connection details
 const imapSmtpConnectionSchema = z.object({
   provider: z.literal('imapAndSmtp'),
   auth: z.object({
@@ -16,59 +15,54 @@ const imapSmtpConnectionSchema = z.object({
     host: z.string(),
     port: z.string().transform((val) => parseInt(val, 10)),
     secure: z.boolean(),
+    tls: z.boolean().optional(),
     smtpHost: z.string(),
     smtpPort: z.string().transform((val) => parseInt(val, 10)),
     smtpSecure: z.boolean(),
+    smtpTLS: z.boolean().optional(),
   }),
 });
 
-// Schema for testing IMAP/SMTP connection
 const testConnectionSchema = z.object({
   email: z.string().email(),
   password: z.string(),
   imapHost: z.string(),
-  imapPort: z.string().transform(val => parseInt(val, 10)),
+  imapPort: z.string().transform((val) => parseInt(val, 10)),
   imapSecure: z.boolean(),
+  imapTLS: z.boolean().optional(),
   smtpHost: z.string(),
-  smtpPort: z.string().transform(val => parseInt(val, 10)),
+  smtpPort: z.string().transform((val) => parseInt(val, 10)),
   smtpSecure: z.boolean(),
+  smtpTLS: z.boolean().optional(),
 });
 
 export const connectionsRouter = router({
-  // Test IMAP/SMTP connection without saving
-  testConnection: privateProcedure
-    .input(testConnectionSchema)
-    .mutation(async ({ input }) => {
-      const { 
-        email, password, 
-        imapHost, imapPort, imapSecure,
-        smtpHost, smtpPort, smtpSecure 
-      } = input;
-      
-      // Test both IMAP and SMTP connections independently
-      const [imapResult, smtpResult] = await Promise.all([
-        testImapConnection(
-          input.imapHost,
-          input.imapPort,
-          input.imapSecure,
-          input.email,
-          input.password
-        ),
-        testSmtpConnection(
-          input.smtpHost,
-          input.smtpPort,
-          input.smtpSecure,
-          input.email,
-          input.password
-        )
-      ]);
+  testConnection: privateProcedure.input(testConnectionSchema).mutation(async ({ input }) => {
+    const [imapResult, smtpResult] = await Promise.all([
+      testImapConnection(
+        input.imapHost,
+        input.imapPort,
+        input.imapSecure,
+        input.email,
+        input.password,
+        input.imapTLS,
+      ),
+      testSmtpConnection(
+        input.smtpHost,
+        input.smtpPort,
+        input.smtpSecure,
+        input.email,
+        input.password,
+        input.smtpTLS,
+      ),
+    ]);
 
-      return {
-        imapTest: imapResult,
-        smtpTest: smtpResult,
-        success: imapResult.success && smtpResult.success
-      };
-    }),
+    return {
+      imapTest: imapResult,
+      smtpTest: smtpResult,
+      success: imapResult.success && smtpResult.success,
+    };
+  }),
   list: privateProcedure
     .use(
       createRateLimiterMiddleware({
@@ -120,19 +114,16 @@ export const connectionsRouter = router({
         await db.update(user_).set({ defaultConnectionId: null });
     }),
 
-  // Add an IMAP/SMTP email connection with manual settings
   addImapSmtpConnection: privateProcedure
     .input(imapSmtpConnectionSchema)
     .mutation(async ({ input, ctx }) => {
       const { db } = ctx;
       const user = ctx.session.user;
 
-      // Extract connection details
       const { provider, auth: connectionAuth } = input;
       const { email, refreshToken, host, port, secure, smtpHost, smtpPort, smtpSecure } =
         connectionAuth;
 
-      // Format connection metadata for storing
       const connectionId = uuidv4();
       const imapSmtpConfig = {
         provider,
@@ -147,21 +138,19 @@ export const connectionsRouter = router({
         },
       };
 
-      // Create new connection in the database
       await db.insert(connection).values({
         id: connectionId,
         userId: user.id,
         email,
-        providerId: 'imapAndSmtp', // Must match the key in supportedProviders in driver/index.ts
-        accessToken: '', // Not used for IMAP/SMTP
-        refreshToken, // This is the password for IMAP/SMTP
-        scope: JSON.stringify(imapSmtpConfig), // Store IMAP/SMTP config in the scope field
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Set a far future expiry date
+        providerId: 'imapAndSmtp',
+        accessToken: '',
+        refreshToken,
+        scope: JSON.stringify(imapSmtpConfig),
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
       } as typeof connection.$inferInsert);
 
-      // If this is the user's first connection, set it as default
       const userRecord = await db.query.user.findFirst({
         where: eq(user_.id, user.id),
       });

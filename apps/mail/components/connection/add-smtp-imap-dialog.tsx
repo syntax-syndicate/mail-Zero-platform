@@ -7,6 +7,13 @@ import {
   FormLabel,
   FormMessage,
 } from '../ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,12 +22,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTRPC } from '@/providers/query-provider';
 import { useMutation } from '@tanstack/react-query';
-import { Switch } from '@/components/ui/switch';
 import { authClient } from '@/lib/auth-client';
 import { useForm } from 'react-hook-form';
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -31,7 +38,6 @@ type Props = {
 
 type ConnectionMethod = 'manual' | 'oauth';
 
-// Map our internal provider IDs to better-auth compatible provider IDs
 type OAuthProviderId =
   | 'google'
   | 'microsoft'
@@ -52,6 +58,8 @@ type OAuthProviderId =
   | 'vk'
   | 'zoom';
 
+type ConnectionSecurityType = 'none' | 'ssl' | 'tls';
+
 type EmailProvider = {
   id: string;
   name: string;
@@ -61,10 +69,10 @@ type EmailProvider = {
   defaultConfig?: {
     imapHost: string;
     imapPort: string;
-    imapSecure: boolean;
+    imapSecurityType: ConnectionSecurityType;
     smtpHost: string;
     smtpPort: string;
-    smtpSecure: boolean;
+    smtpSecurityType: ConnectionSecurityType;
   };
 };
 
@@ -85,10 +93,10 @@ const COMMON_EMAIL_PROVIDERS: EmailProvider[] = [
     defaultConfig: {
       imapHost: 'imap.gmail.com',
       imapPort: '993',
-      imapSecure: true,
+      imapSecurityType: 'ssl',
       smtpHost: 'smtp.gmail.com',
       smtpPort: '465',
-      smtpSecure: true,
+      smtpSecurityType: 'ssl',
     },
   },
   {
@@ -96,48 +104,46 @@ const COMMON_EMAIL_PROVIDERS: EmailProvider[] = [
     oauthProviderId: 'microsoft' as OAuthProviderId,
     name: 'Outlook',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path
-          fill="currentColor"
-          d="M21.179 4.828L11.776 1.04a.504.504 0 0 0-.403 0L2 4.828V19.01l9.372 3.93a.504.504 0 0 0 .403 0L21.18 19.01V4.828h-.001ZM9.85 11.648H7.842V9.64h2.008v2.008Zm3.307 0H11.15V9.64h2.009v2.008Zm3.308 0h-2.008V9.64h2.008v2.008Zm0-3.307h-2.008V6.333h2.008V8.34Zm-3.308 0H11.15V6.333h2.009V8.34Zm-3.307 0H7.842V6.333h2.008V8.34Z"
-        />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+        <path d="M0 32h214.6v214.6H0V32zm233.4 0H448v214.6H233.4V32zM0 265.4h214.6V480H0V265.4zm233.4 0H448V480H233.4V265.4z" />
       </svg>
     ),
     oauthSupported: true,
     defaultConfig: {
       imapHost: 'outlook.office365.com',
       imapPort: '993',
-      imapSecure: true,
+      imapSecurityType: 'ssl',
       smtpHost: 'smtp.office365.com',
       smtpPort: '587',
-      smtpSecure: false,
+      smtpSecurityType: 'tls',
     },
   },
   {
     id: 'yahoo',
     name: 'Yahoo',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path
-          fill="currentColor"
-          d="M13.258 12.942l.463 10.358h-3.442l.495-10.358Zm-.495-7.265c1.021 0 1.84.92 1.84 2.057 0 1.138-.819 2.058-1.84 2.058s-1.84-.92-1.84-2.058c0-1.137.819-2.057 1.84-2.057ZM20.77 3.5l-3.376 8.98c-.092.184-.063.372 0 .54l3.376 7.574C21.133 21.516 20 22 20 22H17.37l-2.155-5.277-2.215 5.277H8c0 0-1.133-.485-.798-1.406L10.548 13c.092-.153.094-.358 0-.54L7.23 3.5H10l2.155 5.277L14.37 3.5h3"
-        />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+        <path d="M223.7 141.1 167 284.2 111 141.1H14.9L120.8 390.2 82.2 480h94.2L317.3 141.1zm105.4 135.8a58.2 58.2 0 1 0 58.2 58.2A58.2 58.2 0 0 0 329.1 276.9zM394.7 32l-93 223.5H406.4L499.1 32z" />
       </svg>
     ),
     oauthSupported: false,
     defaultConfig: {
       imapHost: 'imap.mail.yahoo.com',
       imapPort: '993',
-      imapSecure: true,
+      imapSecurityType: 'ssl',
       smtpHost: 'smtp.mail.yahoo.com',
       smtpPort: '465',
-      smtpSecure: true,
+      smtpSecurityType: 'ssl',
     },
   },
   {
     id: 'custom',
     name: 'Other',
-    icon: <Mail className="h-6 w-6" />,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+        <path d="M64 208.1L256 65.9 448 208.1l0 47.4L289.5 373c-9.7 7.2-21.4 11-33.5 11s-23.8-3.9-33.5-11L64 255.5l0-47.4zM256 0c-12.1 0-23.8 3.9-33.5 11L25.9 156.7C9.6 168.8 0 187.8 0 208.1L0 448c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-239.9c0-20.3-9.6-39.4-25.9-51.4L289.5 11C279.8 3.9 268.1 0 256 0z" />
+      </svg>
+    ),
     oauthSupported: false,
   },
 ];
@@ -149,12 +155,12 @@ const formSchema = z.object({
   imapPort: z.string().refine((val) => !isNaN(Number(val)), {
     message: 'Port must be a number',
   }),
-  imapSecure: z.boolean().default(true),
+  imapSecurityType: z.enum(['none', 'ssl', 'tls', 'starttls']),
   smtpHost: z.string().min(1, 'SMTP host is required'),
   smtpPort: z.string().refine((val) => !isNaN(Number(val)), {
     message: 'Port must be a number',
   }),
-  smtpSecure: z.boolean().default(true),
+  smtpSecurityType: z.enum(['none', 'ssl', 'tls', 'starttls']),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -184,40 +190,36 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: 'akx9@icloud.com',
-      refreshToken: 'ykut-kszd-ozfd-zpvm', // App-specific password should be entered by user
-      imapHost: 'imap.mail.me.com',
+      email: 'juana56@ethereal.email',
+      refreshToken: 'uWUBeQZZRpRTxjAEMD',
+      imapHost: 'imap.ethereal.email',
       imapPort: '993',
-      imapSecure: true,
-      smtpHost: 'smtp.mail.me.com',
+      imapSecurityType: 'TLS',
+      smtpHost: '95.216.108.161',
       smtpPort: '587',
-      smtpSecure: false, // iCloud SMTP requires STARTTLS, not SSL/TLS
+      smtpSecurityType: 'STARTTLS',
     },
   });
 
-  // Update form values when provider is selected
   const handleProviderSelect = (provider: EmailProvider) => {
     setSelectedProvider(provider);
 
-    // If the provider has OAuth support, set connection method to OAuth
     if (provider.oauthSupported) {
       setConnectionMethod('oauth');
     } else {
       setConnectionMethod('manual');
     }
 
-    // If provider has default config, update the form values
     if (provider.defaultConfig) {
       form.setValue('imapHost', provider.defaultConfig.imapHost);
       form.setValue('imapPort', provider.defaultConfig.imapPort);
-      form.setValue('imapSecure', provider.defaultConfig.imapSecure);
+      form.setValue('imapSecurityType', provider.defaultConfig.imapSecurityType);
       form.setValue('smtpHost', provider.defaultConfig.smtpHost);
       form.setValue('smtpPort', provider.defaultConfig.smtpPort);
-      form.setValue('smtpSecure', provider.defaultConfig.smtpSecure);
+      form.setValue('smtpSecurityType', provider.defaultConfig.smtpSecurityType);
     }
   };
 
-  // Handle OAuth authentication
   const handleOAuthConnect = async () => {
     if (!selectedProvider || !selectedProvider.oauthSupported || !selectedProvider.oauthProviderId)
       return;
@@ -225,19 +227,14 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
     try {
       setIsSubmitting(true);
 
-      // Use better-auth to link the social account
       await authClient.linkSocial({
         provider: selectedProvider.oauthProviderId,
         callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/${pathname}?provider=${selectedProvider.id}`,
-        // Add specific scopes for IMAP/SMTP access
         scopes:
           selectedProvider.id === 'gmail'
-            ? ['https://mail.google.com/'] // Gmail specific scope for full mail access
-            : ['Mail.ReadWrite', 'Mail.Send', 'offline_access'], // Microsoft specific scopes
+            ? ['https://mail.google.com/']
+            : ['Mail.ReadWrite', 'Mail.Send', 'offline_access'],
       });
-
-      // Note: The actual connection will happen after OAuth redirect
-      // We don't need to handle it here since the callback will manage it
     } catch (error) {
       console.error('Error initiating OAuth flow:', error);
       toast.error('Failed to connect with OAuth. Please try again or use manual setup.');
@@ -245,22 +242,27 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
     }
   };
 
-  // Test the connection without saving
   const handleTestConnection = async (data: FormValues) => {
     setIsTestingConnection(true);
     setTestResults(null);
 
     try {
-      // Test the connection using the tRPC endpoint
+      const imapSecure = data.imapSecurityType !== 'none';
+      const smtpSecure = data.smtpSecurityType !== 'none';
+      const imapTLS = data.imapSecurityType === 'tls';
+      const smtpTLS = data.smtpSecurityType === 'tls';
+
       const results = await testConnection({
         email: data.email,
-        password: data.refreshToken, // Use the password field for testing
+        password: data.refreshToken,
         imapHost: data.imapHost,
         imapPort: data.imapPort,
-        imapSecure: data.imapSecure,
+        imapSecure,
+        imapTLS,
         smtpHost: data.smtpHost,
         smtpPort: data.smtpPort,
-        smtpSecure: data.smtpSecure,
+        smtpSecure,
+        smtpTLS,
       });
 
       setTestResults(results);
@@ -282,29 +284,33 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
     }
   };
 
-  // Handle manual form submission
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Submit data to the server using tRPC mutation
+      const imapSecure = data.imapSecurityType !== 'none';
+      const smtpSecure = data.smtpSecurityType !== 'none';
+      const imapTLS = data.imapSecurityType === 'tls';
+      const smtpTLS = data.smtpSecurityType === 'tls';
+
       await addImapSmtpConnection({
-        provider: 'imapAndSmtp' as any, // Type assertion to match server schema
+        provider: 'imapAndSmtp' as any,
         auth: {
           email: data.email,
-          refreshToken: data.refreshToken, // This is the password for manual setup
+          refreshToken: data.refreshToken,
           host: data.imapHost,
           port: data.imapPort,
-          secure: data.imapSecure,
+          secure: imapSecure,
+          tls: imapTLS,
           smtpHost: data.smtpHost,
           smtpPort: data.smtpPort,
-          smtpSecure: data.smtpSecure,
+          smtpSecure,
+          smtpTLS,
         },
       });
 
       toast.success('Your email account has been connected to Zero.');
       onOpenChange(false);
 
-      // Refresh the page to show the new connection
       router.refresh();
     } catch (error) {
       console.error('Error connecting email:', error);
@@ -322,7 +328,6 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
           <DialogDescription>Connect your email account to Zero.</DialogDescription>
         </DialogHeader>
 
-        {/* Provider Selection */}
         <div className="mb-6">
           <h3 className="mb-3 text-sm font-medium">Select Email Provider</h3>
           <div className="grid grid-cols-4 gap-3">
@@ -331,10 +336,14 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
                 key={provider.id}
                 type="button"
                 variant={selectedProvider?.id === provider.id ? 'default' : 'outline'}
-                className="flex h-20 flex-col items-center justify-center gap-2 p-2"
+                className="group flex h-20 flex-col items-center justify-center gap-2 p-2"
                 onClick={() => handleProviderSelect(provider)}
               >
-                {provider.icon}
+                <span
+                  className={cn(selectedProvider?.id === provider.id ? 'fill-black' : 'fill-white')}
+                >
+                  {provider.icon}
+                </span>
                 <span className="text-xs">{provider.name}</span>
               </Button>
             ))}
@@ -343,7 +352,6 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
 
         {selectedProvider && (
           <>
-            {/* Connection Method Selection */}
             {selectedProvider.oauthSupported && (
               <div className="mb-6">
                 <h3 className="mb-3 text-sm font-medium">Connection Method</h3>
@@ -359,7 +367,6 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
               </div>
             )}
 
-            {/* OAuth Connection */}
             {connectionMethod === 'oauth' && selectedProvider.oauthSupported && (
               <div className="space-y-6">
                 <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
@@ -383,7 +390,6 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
               </div>
             )}
 
-            {/* Manual Connection Form */}
             {connectionMethod === 'manual' && (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -466,22 +472,29 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
 
                         <FormField
                           control={form.control}
-                          name="imapSecure"
+                          name="imapSecurityType"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Secure Connection (SSL/TLS)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    id="imap-secure"
-                                  />
-                                  <label htmlFor="imap-secure">
-                                    {field.value ? 'Enabled' : 'Disabled'}
-                                  </label>
-                                </div>
-                              </FormControl>
+                              <FormLabel>Connection Security</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select security type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  <SelectItem value="ssl">SSL</SelectItem>
+                                  <SelectItem value="tls">TLS</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                {field.value === 'ssl'
+                                  ? 'SSL encryption (usually port 993)'
+                                  : field.value === 'tls'
+                                    ? 'TLS encryption (usually port 143)'
+                                    : 'No encryption (not recommended)'}
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -521,22 +534,29 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
 
                         <FormField
                           control={form.control}
-                          name="smtpSecure"
+                          name="smtpSecurityType"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Secure Connection (SSL/TLS)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    id="smtp-secure"
-                                  />
-                                  <label htmlFor="smtp-secure">
-                                    {field.value ? 'Enabled' : 'Disabled'}
-                                  </label>
-                                </div>
-                              </FormControl>
+                              <FormLabel>Connection Security</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select security type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  <SelectItem value="ssl">SSL</SelectItem>
+                                  <SelectItem value="tls">TLS</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                {field.value === 'ssl'
+                                  ? 'SSL encryption (usually port 465)'
+                                  : field.value === 'tls'
+                                    ? 'TLS encryption (usually port 587)'
+                                    : 'No encryption (not recommended)'}
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -545,7 +565,6 @@ const AddSmtpImapDialog = ({ open, onOpenChange }: Props) => {
                     </TabsContent>
                   </Tabs>
 
-                  {/* Test Connection Results */}
                   {testResults && (
                     <div className="mt-4 rounded-md border border-gray-200 p-3 dark:border-gray-800">
                       <h4 className="mb-2 text-sm font-medium">Connection Test Results</h4>
