@@ -176,7 +176,6 @@ export class ImapSmtpMailManager implements MailManager {
       // Test IMAP connection
       await this.ensureImapConnection();
       const imapSuccess = this.imapConnected;
-
       // Test SMTP connection
       let smtpSuccess = false;
       try {
@@ -185,7 +184,6 @@ export class ImapSmtpMailManager implements MailManager {
       } catch (error) {
         console.error('SMTP verification failed:', error);
       }
-
       return { imap: imapSuccess, smtp: smtpSuccess };
     } catch (error) {
       console.error('Connection test failed:', error);
@@ -244,7 +242,6 @@ export class ImapSmtpMailManager implements MailManager {
     try {
       // Get all mailboxes
       const mailboxes = await this.imapClient.list();
-
       // Extract folder paths
       return mailboxes.map((mailbox: { path: string }) => mailbox.path);
     } catch (error) {
@@ -258,7 +255,6 @@ export class ImapSmtpMailManager implements MailManager {
 
     // First try common folders to optimize search
     const commonFolders = ['INBOX', 'Sent', 'Drafts', 'Archive'];
-
     for (const folder of commonFolders) {
       try {
         const found = await this.checkMessageInFolder(folder, messageId);
@@ -348,7 +344,6 @@ export class ImapSmtpMailManager implements MailManager {
         try {
           // Select the folder
           await this.imapClient.mailboxOpen(folder);
-
           // First try to search by Message-ID header
           let results = await this.imapClient.search({
             header: ['Message-ID', `<${messageId}>`],
@@ -399,7 +394,6 @@ export class ImapSmtpMailManager implements MailManager {
           const messages = await Promise.all(
             results.map(async (uid: number) => {
               console.log(`Fetching message data for UID: ${uid}`);
-
               try {
                 const fetchOptions = {
                   uid,
@@ -512,7 +506,6 @@ export class ImapSmtpMailManager implements MailManager {
     if (data.headers?.['in-reply-to']) {
       mailOptions.inReplyTo = data.headers['in-reply-to'];
     }
-
     if (data.headers?.['references']) {
       mailOptions.references = data.headers['references'];
     }
@@ -520,7 +513,6 @@ export class ImapSmtpMailManager implements MailManager {
     // Add attachments if provided
     if (data.attachments && data.attachments.length > 0) {
       console.log(`Processing ${data.attachments.length} attachments`);
-
       mailOptions.attachments = await Promise.all(
         data.attachments.map(async (file) => {
           const content = await file.arrayBuffer();
@@ -542,7 +534,6 @@ export class ImapSmtpMailManager implements MailManager {
       return recipients
         .map((recipient) => {
           if (typeof recipient === 'string') return recipient;
-
           // Handle different recipient formats
           if (typeof recipient === 'object') {
             const email = recipient.email || recipient.address || '';
@@ -560,7 +551,6 @@ export class ImapSmtpMailManager implements MailManager {
       // Handle string input
       return recipients;
     }
-
     return '';
   }
 
@@ -1181,7 +1171,6 @@ export class ImapSmtpMailManager implements MailManager {
         for (const threadId of threadIds) {
           // Get the actual message ID (remove thread: prefix if present)
           const messageId = threadId.startsWith('thread:') ? threadId.substring(7) : threadId;
-
           // Find the folder containing this message
           const folder = await this.findMessageFolder(messageId);
 
@@ -1203,7 +1192,6 @@ export class ImapSmtpMailManager implements MailManager {
             const refResults = await this.imapClient.search({
               header: ['References', messageId],
             });
-
             if (refResults.length) {
               // Add found messages to results
               results.push(...refResults);
@@ -1248,7 +1236,6 @@ export class ImapSmtpMailManager implements MailManager {
         for (const threadId of threadIds) {
           // Get the actual message ID (remove thread: prefix if present)
           const messageId = threadId.startsWith('thread:') ? threadId.substring(7) : threadId;
-
           // Find the folder containing this message
           const folder = await this.findMessageFolder(messageId);
 
@@ -1270,7 +1257,6 @@ export class ImapSmtpMailManager implements MailManager {
             const refResults = await this.imapClient.search({
               header: ['References', messageId],
             });
-
             if (refResults.length) {
               // Add found messages to results
               results.push(...refResults);
@@ -1362,17 +1348,14 @@ export class ImapSmtpMailManager implements MailManager {
               if (att.filename === attachmentIdentifier) {
                 return true;
               }
-
               // Try to match by content ID
               if (att.contentId && att.contentId.replace(/[<>]/g, '') === attachmentIdentifier) {
                 return true;
               }
-
               // Try to match by index
               if (attachmentIdentifier === index.toString()) {
                 return true;
               }
-
               return false;
             },
           );
@@ -1476,12 +1459,10 @@ export class ImapSmtpMailManager implements MailManager {
 
     // Get HTML content with fallback to text
     const html = parsed.html || (parsed.text ? parsed.text.replace(/\n/g, '<br>') : '');
-
     // Extract header information
     const references = parsed.references || '';
     const inReplyTo = parsed.inReplyTo || '';
     const subject = parsed.subject || '(No subject)';
-
     // Create sender object
     const sender = {
       email: from.address || '',
@@ -1562,7 +1543,6 @@ export class ImapSmtpMailManager implements MailManager {
 
           // Get message UIDs
           let messageIds;
-
           if (Object.keys(searchCriteria).length > 0) {
             // Search with criteria
             messageIds = await this.imapClient.search(searchCriteria);
@@ -1571,7 +1551,6 @@ export class ImapSmtpMailManager implements MailManager {
             // Get the most recent messages by sequence number
             const range = `${Math.max(1, mailbox.exists - to + 1)}:${mailbox.exists}`;
             console.log(`Fetching messages in range: ${range}`);
-
             try {
               const messages = await this.imapClient.fetch(range, { uid: true });
               messageIds = [];
@@ -1589,7 +1568,6 @@ export class ImapSmtpMailManager implements MailManager {
 
           // Fetch message data for the UIDs
           const threadsMap = new Map(); // Map to track unique threads
-
           for (const uid of messageIds) {
             try {
               const fetchOptions = {
@@ -1601,7 +1579,6 @@ export class ImapSmtpMailManager implements MailManager {
               };
 
               const fetchedMessage = await this.imapClient.fetchOne(uid, fetchOptions);
-
               if (!fetchedMessage) {
                 console.warn(`No message data returned for UID ${uid}`);
                 continue;
@@ -1652,14 +1629,12 @@ export class ImapSmtpMailManager implements MailManager {
     // Extract Message-ID from headers
     const headers = message.headers || {};
     const messageId = headers['message-id'];
-
     if (messageId) {
       const match = messageId.match(/<([^>]+)>/);
       if (match && match[1]) {
         return match[1];
       }
     }
-
     return null;
   }
 
@@ -1681,7 +1656,6 @@ export class ImapSmtpMailManager implements MailManager {
         return matches[0].replace(/[<>]/g, '');
       }
     }
-
     // Finally try in-reply-to
     const inReplyTo = headers['in-reply-to'];
     if (inReplyTo) {
@@ -1690,7 +1664,6 @@ export class ImapSmtpMailManager implements MailManager {
         return match[1];
       }
     }
-
     return null;
   }
 
@@ -1780,7 +1753,6 @@ export class ImapSmtpMailManager implements MailManager {
       return await Promise.resolve(fn());
     } catch (error: any) {
       const isFatal = FatalErrors.includes(error.message);
-
       // Detailed error logging
       console.error(
         `[${isFatal ? 'FATAL_ERROR' : 'ERROR'}] [IMAP/SMTP Driver] Operation: ${operation}`,
@@ -1791,13 +1763,11 @@ export class ImapSmtpMailManager implements MailManager {
           isFatal,
         },
       );
-
       // Close connection on fatal errors
       if (isFatal) {
         if (this.config.c) await deleteActiveConnection(this.config.c);
         await this.closeImapConnection();
       }
-
       throw new StandardizedError(error, operation, context);
     }
   }
@@ -1811,14 +1781,12 @@ export class ImapSmtpMailManager implements MailManager {
       return fn();
     } catch (error: any) {
       const isFatal = FatalErrors.includes(error.message);
-
       console.error(`[IMAP/SMTP Driver Error] Operation: ${operation}`, {
         error: error.message,
         context: sanitizeContext(context),
         stack: error.stack,
         isFatal,
       });
-
       if (isFatal && this.config.c) void deleteActiveConnection(this.config.c);
       throw new StandardizedError(error, operation, context);
     }
