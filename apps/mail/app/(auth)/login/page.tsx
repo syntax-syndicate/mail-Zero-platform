@@ -1,7 +1,8 @@
 import { authProviders, customProviders, isProviderEnabled } from '@zero/server/auth-providers';
 import { LoginClient } from './login-client';
+import { useLoaderData } from 'react-router';
 
-export default function LoginPage() {
+export function loader() {
   const envNodeEnv = process.env.NODE_ENV;
   const isProd = envNodeEnv === 'production';
 
@@ -38,6 +39,15 @@ export default function LoginPage() {
   });
 
   const allProviders = [...customProviderStatus, ...authProviderStatus];
+
+  return {
+    allProviders,
+    isProd,
+  };
+}
+
+export default function LoginPage() {
+  const { allProviders, isProd } = useLoaderData<typeof loader>();
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-white dark:bg-black">

@@ -1,5 +1,3 @@
-'use client';
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { keyboardShortcuts } from '@/config/shortcuts';
 import { useCallback, useEffect, useRef } from 'react';
@@ -8,7 +6,7 @@ import { useTRPC } from '@/providers/query-provider';
 import { useShortcuts } from './use-hotkey-utils';
 import { useThreads } from '@/hooks/use-threads';
 import { useStats } from '@/hooks/use-stats';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from 'use-intl';
 import { toast } from 'sonner';
 
 export function MailListHotkeys() {

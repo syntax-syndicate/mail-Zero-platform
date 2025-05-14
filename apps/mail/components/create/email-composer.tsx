@@ -12,8 +12,8 @@ import { TextEffect } from '@/components/motion-primitives/text-effect';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import useComposeEditor from '@/hooks/use-compose-editor';
 import { Loader, Check, X as XIcon } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Command, Paperclip, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useTRPC } from '@/providers/query-provider';
@@ -386,7 +386,7 @@ export function EmailComposer({
     const handlePasteFiles = (event: ClipboardEvent) => {
       const clipboardData = event.clipboardData;
       if (!clipboardData || !clipboardData.files.length) return;
-      
+
       const pastedFiles = Array.from(clipboardData.files);
       if (pastedFiles.length > 0) {
         event.preventDefault();
@@ -711,11 +711,14 @@ export function EmailComposer({
       <div className="relative -bottom-1 flex flex-col items-start justify-start gap-2 self-stretch border-t bg-[#FFFFFF] px-3 py-3 outline-white/5 dark:bg-[#202020]">
         <div
           className={cn(
-            'flex flex-col gap-2.5 self-stretch max-h-[calc(100vh-350px)] min-h-[200px] overflow-y-auto',
+            'flex max-h-[calc(100vh-350px)] min-h-[200px] flex-col gap-2.5 self-stretch overflow-y-auto',
             aiGeneratedMessage !== null ? 'blur-sm' : '',
           )}
         >
-          <EditorContent editor={editor} className="prose dark:prose-invert prose-headings:font-title focus:outline-none max-w-full" />
+          <EditorContent
+            editor={editor}
+            className="prose dark:prose-invert prose-headings:font-title max-w-full focus:outline-none"
+          />
         </div>
 
         {/* Bottom Actions */}

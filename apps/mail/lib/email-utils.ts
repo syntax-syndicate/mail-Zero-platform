@@ -1,4 +1,4 @@
-import { parseFrom as _parseFrom, parseAddressList as _parseAddressList } from 'email-addresses';
+import * as emailAddresses from 'email-addresses';
 import type { Sender } from '@/types';
 import Color from 'color';
 
@@ -110,7 +110,7 @@ const FALLBACK_SENDER = {
 };
 
 export const parseFrom = (fromHeader: string) => {
-  const parsedSender = _parseFrom(fromHeader);
+  const parsedSender = emailAddresses.parseFrom(fromHeader);
   if (!parsedSender) return FALLBACK_SENDER;
 
   // Technically the "From" header can include multiple email addresses according to
@@ -133,7 +133,7 @@ export const parseFrom = (fromHeader: string) => {
 };
 
 export const parseAddressList = (header: string): Sender[] => {
-  const parsedAddressList = _parseAddressList(header);
+  const parsedAddressList = emailAddresses.parseAddressList(header);
   if (!parsedAddressList) return [FALLBACK_SENDER];
 
   return parsedAddressList?.flatMap((address) => {
@@ -157,7 +157,7 @@ export const cleanEmailAddresses = (emails: string | undefined) => {
   // Split by commas and clean each address individually
   return emails
     .split(',')
-    .map(email => email.trim().replace(/^<|>$/g, ''))
+    .map((email) => email.trim().replace(/^<|>$/g, ''))
     .filter(Boolean); // Remove any empty entries
 };
 
@@ -173,9 +173,9 @@ export const formatRecipients = (recipients: string[] | undefined) => {
  */
 export const formatMimeRecipients = (recipients: string | string[]) => {
   if (Array.isArray(recipients)) {
-    return recipients.map(recipient => ({ addr: recipient }));
+    return recipients.map((recipient) => ({ addr: recipient }));
   } else if (typeof recipients === 'string' && recipients.trim() !== '') {
-    return recipients.split(',').map(recipient => ({ addr: recipient.trim() }));
+    return recipients.split(',').map((recipient) => ({ addr: recipient.trim() }));
   }
   return null;
 };

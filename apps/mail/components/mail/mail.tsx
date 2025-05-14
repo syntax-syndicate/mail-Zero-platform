@@ -1,22 +1,3 @@
-'use client';
-
-import {
-  Archive2,
-  Bell,
-  CurvedArrow,
-  Eye,
-  Important,
-  Lightning,
-  Mail,
-  Star2,
-  Tag,
-  User,
-  X,
-  MessageSquare,
-  Trash,
-  ArrowCircle,
-  ScanEye,
-} from '../icons/icons';
 import {
   Dialog,
   DialogContent,
@@ -26,25 +7,37 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Archive2,
+  Bell,
+  CurvedArrow,
+  Eye,
+  Lightning,
+  Mail,
+  Star2,
+  Tag,
+  User,
+  X,
+  Trash,
+  ScanEye,
+} from '../icons/icons';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ThreadDemo, ThreadDisplay } from '@/components/mail/thread-display';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MailList, MailListDemo } from '@/components/mail/mail-list';
 import { Command, RefreshCcw, Settings2Icon } from 'lucide-react';
 import { trpcClient, useTRPC } from '@/providers/query-provider';
 import { backgroundQueueAtom } from '@/store/backgroundQueue';
 import { handleUnsubscribe } from '@/lib/email-utils.client';
 import { useMediaQuery } from '../../hooks/use-media-query';
-import { useAISidebar } from '@/components/ui/ai-sidebar';
 import { useSearchValue } from '@/hooks/use-search-value';
+import { MailList } from '@/components/mail/mail-list';
 import { useHotkeysContext } from 'react-hotkeys-hook';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router';
 import { useMail } from '@/components/mail/use-mail';
 import { SidebarToggle } from '../ui/sidebar-toggle';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useBrainState } from '@/hooks/use-summary';
 import { clearBulkSelectionAtom } from './use-mail';
 import { cleanSearchValue, cn } from '@/lib/utils';
@@ -53,7 +46,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
 import { useStats } from '@/hooks/use-stats';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from 'use-intl';
 import { SearchBar } from './search-bar';
 import { useQueryState } from 'nuqs';
 import { TagInput } from 'emblor';
@@ -170,7 +163,7 @@ export function MailLayout() {
   const [mail, setMail] = useMail();
   const [, clearBulkSelection] = useAtom(clearBulkSelectionAtom);
   const isMobile = useIsMobile();
-  const router = useRouter();
+  const navigate = useNavigate();
   const { data: session, isPending } = useSession();
   const t = useTranslations();
   const prevFolderRef = useRef(folder);
@@ -186,7 +179,7 @@ export function MailLayout() {
 
   useEffect(() => {
     if (!session?.user && !isPending) {
-      router.push('/login');
+      navigate('/login');
     }
   }, [session?.user, isPending]);
 

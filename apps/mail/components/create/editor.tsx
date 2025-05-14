@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Bold,
   Italic,
@@ -45,6 +43,7 @@ import { handleImageDrop, handleImagePaste } from 'novel';
 import EditorMenu from '@/components/create/editor-menu';
 import { UploadedFileIcon } from './uploaded-file-icon';
 import { Separator } from '@/components/ui/separator';
+import { useReducer, useRef, useEffect } from 'react';
 import { AutoComplete } from './editor-autocomplete';
 import { Editor as CoreEditor } from '@tiptap/core';
 import { cn, truncateFileName } from '@/lib/utils';
@@ -52,9 +51,8 @@ import { TextSelection } from 'prosemirror-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EditorView } from 'prosemirror-view';
-import { useTranslations } from 'next-intl';
 import { Markdown } from 'tiptap-markdown';
-import { useReducer, useRef, useEffect } from 'react';
+import { useTranslations } from 'use-intl';
 import { Slice } from 'prosemirror-model';
 import { useState } from 'react';
 import React from 'react';

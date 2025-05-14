@@ -1,7 +1,6 @@
-import { ImageResponse } from 'next/og';
-export const runtime = 'edge';
+import { ImageResponse } from 'workers-og';
 
-export async function GET() {
+export async function loader() {
   async function loadGoogleFont(font: string, weight: string) {
     const url = `https://fonts.googleapis.com/css2?family=${font}:wght@${weight}&display=swap`;
     const css = await (await fetch(url)).text();
@@ -17,9 +16,9 @@ export async function GET() {
     throw new Error('failed to load font data');
   }
 
-  const mailBuffer = await fetch(new URL(`${process.env.NEXT_PUBLIC_APP_URL}/white-icon.svg`)).then(
-    (res) => res.arrayBuffer(),
-  );
+  const mailBuffer = await fetch(
+    new URL(`${import.meta.env.VITE_PUBLIC_APP_URL}/white-icon.svg`),
+  ).then((res) => res.arrayBuffer());
   const mailBase64 = Buffer.from(mailBuffer).toString('base64');
   const mail = `data:image/svg+xml;base64,${mailBase64}`;
 

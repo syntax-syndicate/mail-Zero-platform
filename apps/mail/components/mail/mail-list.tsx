@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Archive2,
   Bell,
@@ -45,7 +43,7 @@ import { useSearchValue } from '@/hooks/use-search-value';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { highlightText } from '@/lib/email-utils.client';
 import { useHotkeysContext } from 'react-hotkeys-hook';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router';
 import { useTRPC } from '@/providers/query-provider';
 import { useThreadLabels } from '@/hooks/use-labels';
 import { useKeyState } from '@/hooks/use-hot-key';
@@ -55,14 +53,13 @@ import { RenderLabels } from './render-labels';
 import { Badge } from '@/components/ui/badge';
 import { useDraft } from '@/hooks/use-drafts';
 import { useStats } from '@/hooks/use-stats';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from 'use-intl';
 import { useTheme } from 'next-themes';
 import { Button } from '../ui/button';
 import { useQueryState } from 'nuqs';
 import { Categories } from './mail';
 import items from './demo.json';
 import { useAtom } from 'jotai';
-import Image from 'next/image';
 import { toast } from 'sonner';
 
 const HOVER_DELAY = 1000; // ms before prefetching
@@ -611,11 +608,7 @@ const Thread = memo(
                         {latestMessage.to.map((e) => e.email).join(', ')}
                       </p>
                     ) : (
-                      <p
-                        className={cn(
-                          'mt-1 line-clamp-1 w-full text-sm text-[#8C8C8C] min-w-0',
-                        )}
-                      >
+                      <p className={cn('mt-1 line-clamp-1 w-full min-w-0 text-sm text-[#8C8C8C]')}>
                         {highlightText(latestMessage.subject, searchValue.highlight)}
                       </p>
                     )}
@@ -691,7 +684,7 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
   const { folder } = useParams<{ folder: string }>();
   const { data: session } = useSession();
   const t = useTranslations();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [, setThreadId] = useQueryState('threadId');
   const [, setDraftId] = useQueryState('draftId');
   const [category, setCategory] = useQueryState('category');
@@ -872,7 +865,7 @@ export const MailList = memo(({ isCompact }: MailListProps) => {
           ) : !items || items.length === 0 ? (
             <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center">
               <div className="flex flex-col items-center justify-center gap-2 text-center">
-                <Image
+                <img
                   suppressHydrationWarning
                   src={resolvedTheme === 'dark' ? '/empty-state.svg' : '/empty-state-light.svg'}
                   alt="Empty Inbox"

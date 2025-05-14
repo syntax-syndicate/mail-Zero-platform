@@ -1,5 +1,3 @@
-'use client';
-
 import {
   CommandDialog,
   CommandEmpty,
@@ -13,14 +11,14 @@ import {
 import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useOpenComposeModal } from '@/hooks/use-open-compose-modal';
 import { navigationConfig, type NavItem } from '@/config/navigation';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { useRouter, usePathname } from 'next/navigation';
+import { useNavigate, useLocation } from 'react-router';
 import { keyboardShortcuts } from '@/config/shortcuts';
 import { ArrowUpRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from 'use-intl';
 import { CircleHelp } from 'lucide-react';
-import * as React from 'react';
+import { VisuallyHidden } from 'radix-ui';
 import { Pencil2 } from '../icons/icons';
+import * as React from 'react';
 
 type CommandPaletteContext = {
   open: boolean;
@@ -44,9 +42,9 @@ export function useCommandPalette() {
 
 export function CommandPalette({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
-  const { open: openComposeModal } = useOpenComposeModal(); // Correctly use open function
-  const router = useRouter();
-  const pathname = usePathname();
+  const { open: openComposeModal } = useOpenComposeModal();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -77,8 +75,8 @@ export function CommandPalette({ children }: { children: React.ReactNode }) {
       item: {
         title: 'common.commandPalette.commands.composeMessage',
         url: '/mail/create',
-        icon: Pencil2
-      }
+        icon: Pencil2,
+      },
     });
 
     for (const sectionKey in navigationConfig) {
@@ -142,12 +140,12 @@ export function CommandPalette({ children }: { children: React.ReactNode }) {
       }}
     >
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <VisuallyHidden>
+        <VisuallyHidden.VisuallyHidden>
           <DialogTitle>{t('common.commandPalette.title')}</DialogTitle>
           <DialogDescription>{t('common.commandPalette.description')}</DialogDescription>
-        </VisuallyHidden>
+        </VisuallyHidden.VisuallyHidden>
         <CommandInput autoFocus placeholder={t('common.commandPalette.placeholder')} />
-        <CommandList >
+        <CommandList>
           <CommandEmpty>{t('common.commandPalette.noResults')}</CommandEmpty>
           {allCommands.map((group, groupIndex) => (
             <React.Fragment key={groupIndex}>
@@ -158,7 +156,7 @@ export function CommandPalette({ children }: { children: React.ReactNode }) {
                       key={item.url}
                       onSelect={() =>
                         runCommand(() => {
-                          router.push(item.url);
+                          navigate(item.url);
                         })
                       }
                     >
@@ -166,7 +164,7 @@ export function CommandPalette({ children }: { children: React.ReactNode }) {
                         <item.icon
                           size={16}
                           strokeWidth={2}
-                          className="opacity-60 h-4 w-4"
+                          className="h-4 w-4 opacity-60"
                           aria-hidden="true"
                         />
                       )}

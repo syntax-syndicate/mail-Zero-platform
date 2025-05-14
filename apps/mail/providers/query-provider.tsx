@@ -1,4 +1,3 @@
-'use client';
 import {
   PersistQueryClientProvider,
   type PersistedClient,
@@ -92,7 +91,7 @@ const getQueryClient = (session: Session | null) => {
 };
 
 const getUrl = () => {
-  return process.env.NEXT_PUBLIC_BACKEND_URL + '/api/trpc';
+  return import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/trpc';
 };
 
 export const { TRPCProvider, useTRPC, useTRPCClient } = createTRPCContext<AppRouter>();

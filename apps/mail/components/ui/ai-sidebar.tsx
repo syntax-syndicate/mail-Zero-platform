@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Dialog,
   DialogContent,
@@ -17,16 +15,14 @@ import { useEditor } from '@/components/providers/editor-provider';
 import { AIChat } from '@/components/create/ai-chat';
 import { X, Paper } from '@/components/icons/icons';
 import { GitBranchPlus, Plus } from 'lucide-react';
-import { useBilling } from '@/hooks/use-billing';
+// import { useBilling } from '@/hooks/use-billing';
 import { Button } from '@/components/ui/button';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Gauge } from '@/components/ui/gauge';
-import { usePathname } from 'next/navigation';
-import { useCustomer } from 'autumn-js/next';
+import { useLocation } from 'react-router';
 import { getCookie } from '@/lib/utils';
 import { Textarea } from './textarea';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 
 interface AISidebarProps {
   className?: string;
@@ -77,33 +73,40 @@ export function AISidebarProvider({ children }: { children: React.ReactNode }) {
 export function AISidebar({ children, className }: AISidebarProps & { children: React.ReactNode }) {
   const { open, setOpen } = useAISidebar();
   const [resetKey, setResetKey] = useState(0);
-  const pathname = usePathname();
-  const { chatMessages, attach, customer } = useBilling();
+  const location = useLocation();
+  const pathname = location.pathname;
+  // const { chatMessages, attach, customer } = useBilling();
 
-  const isPro = useMemo(() => {
-    return (
-      customer &&
-      Array.isArray(customer.products) &&
-      customer.products.some(
-        (product: any) =>
-          product.id.includes('pro-example') || product.name.includes('pro-example'),
-      )
-    );
-  }, [customer]);
+  const isPro = useMemo(
+    () => {
+      return true;
+      // return (
+      //   customer &&
+      //   Array.isArray(customer.products) &&
+      //   customer.products.some(
+      //     (product: any) =>
+      //       product.id.includes('pro-example') || product.name.includes('pro-example'),
+      //   )
+      // );
+    },
+    [
+      // customer
+    ],
+  );
 
   const handleUpgrade = async () => {
-    if (attach) {
-      return attach({
-        productId: 'pro-example',
-        successUrl: `${window.location.origin}/mail/inbox?success=true`,
-      })
-        .catch((error: Error) => {
-          console.error('Failed to upgrade:', error);
-        })
-        .then(() => {
-          console.log('Upgraded successfully');
-        });
-    }
+    // if (attach) {
+    //   return attach({
+    //     productId: 'pro-example',
+    //     successUrl: `${window.location.origin}/mail/inbox?success=true`,
+    //   })
+    //     .catch((error: Error) => {
+    //       console.error('Failed to upgrade:', error);
+    //     })
+    //     .then(() => {
+    //       console.log('Upgraded successfully');
+    //     });
+    // }
   };
 
   useHotkeys('Meta+0', () => {
@@ -166,7 +169,8 @@ export function AISidebar({ children, className }: AISidebarProps & { children: 
                             <TooltipTrigger asChild className="md:h-fit md:px-2">
                               <div>
                                 <Gauge
-                                  value={50 - chatMessages.remaining!}
+                                  // value={50 - chatMessages.remaining!}
+                                  value={50}
                                   size="small"
                                   showValue={true}
                                 />
@@ -174,7 +178,8 @@ export function AISidebar({ children, className }: AISidebarProps & { children: 
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                You've used {50 - chatMessages.remaining!} out of 50 chat messages.
+                                {/* You've used {50 - chatMessages.remaining!} out of 50 chat messages. */}
+                                You've used 50 out of 50 chat messages.
                               </p>
                               <p className="mb-2">Upgrade for unlimited messages!</p>
                               <Button onClick={handleUpgrade} className="h-8 w-full">
@@ -208,14 +213,14 @@ export function AISidebar({ children, className }: AISidebarProps & { children: 
                             </DialogHeader>
                             <div className="text-muted-foreground mb-1 mt-4 flex gap-2 text-sm">
                               <span>Zero Chat / System Prompt</span>
-                              <Link
+                              <a
                                 href={'https://github.com/Mail-0/Zero.git'}
                                 target="_blank"
                                 className="flex items-center gap-1 underline"
                               >
                                 <span>Contribute</span>
                                 <GitBranchPlus className="h-4 w-4" />
-                              </Link>
+                              </a>
                             </div>
                             <Textarea
                               className="min-h-60"
@@ -224,14 +229,14 @@ export function AISidebar({ children, className }: AISidebarProps & { children: 
                             />
                             <div className="text-muted-foreground mb-1 mt-4 flex gap-2 text-sm">
                               <span>Zero Compose / System Prompt</span>
-                              <Link
+                              <a
                                 href={'https://github.com/Mail-0/Zero.git'}
                                 target="_blank"
                                 className="flex items-center gap-1 underline"
                               >
                                 <span>Contribute</span>
                                 <GitBranchPlus className="h-4 w-4" />
-                              </Link>
+                              </a>
                             </div>
                             <Textarea
                               className="min-h-60"

@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, type ReactNode, useState, Suspense } from 'react';
 import type { EnvVarInfo } from '@zero/server/auth-providers';
 import ErrorMessage from '@/app/(auth)/login/error-message';
@@ -7,10 +5,8 @@ import { signIn, useSession } from '@/lib/auth-client';
 import { Google } from '@/components/icons/icons';
 import { Button } from '@/components/ui/button';
 import { TriangleAlert } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import Link from 'next/link';
 
 interface EnvVarStatus {
   name: string;
@@ -45,14 +41,14 @@ const getProviderIcon = (providerId: string, className?: string): ReactNode => {
     case 'zero':
       return (
         <>
-          <Image
+          <img
             src="/white-icon.svg"
             alt="Zero"
             width={15}
             height={15}
             className="mr-2 hidden dark:block"
           />
-          <Image
+          <img
             src="/black-icon.svg"
             alt="Zero"
             width={15}
@@ -67,7 +63,7 @@ const getProviderIcon = (providerId: string, className?: string): ReactNode => {
 };
 
 function LoginClientContent({ providers, isProd }: LoginClientProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { data: session, isPending } = useSession();
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
 
@@ -76,7 +72,7 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
     if (missing?.id) {
       setExpandedProviders({ [missing.id]: true });
     }
-  }, [providers, router]);
+  }, [providers]);
 
   const missingRequiredProviders = providers
     .filter((p) => p.required && !p.enabled)
@@ -100,9 +96,9 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
 
   useEffect(() => {
     if (!isPending && session?.connectionId) {
-      router.push('/mail');
+      navigate('/mail');
     }
-  }, [session, isPending, router]);
+  }, [session, isPending, navigate]);
 
   if (isPending || (session && session.connectionId)) return null;
 
@@ -116,12 +112,12 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
 
   const handleProviderClick = (provider: Provider) => {
     if (provider.isCustom && provider.customRedirectPath) {
-      router.push(provider.customRedirectPath);
+      navigate(provider.customRedirectPath);
     } else {
       toast.promise(
         signIn.social({
           provider: provider.id as any,
-          callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/mail`,
+          callbackURL: `${window.location.origin}/mail`,
         }),
         {
           error: 'Login redirect failed',
