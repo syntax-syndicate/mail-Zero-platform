@@ -21,10 +21,10 @@ import { APIError } from 'better-auth/api';
 import { getZeroDB } from './server-utils';
 import { type EProviders } from '../types';
 import type { HonoContext } from '../ctx';
-import { env } from '../env';
 import { createDriver } from './driver';
 import { createDb } from '../db';
 import { Effect } from 'effect';
+import { env } from '../env';
 import { Dub } from 'dub';
 
 const scheduleCampaign = (userInfo: { address: string; name: string }) =>
@@ -192,11 +192,20 @@ export const createAuth = () => {
           const db = await getZeroDB(user.id);
           const connections = await db.findManyConnections();
           const context = getContext<HonoContext>();
-          try {
-            await context.var.autumn.customers.delete(user.id);
-          } catch (error) {
-            console.error('Failed to delete Autumn customer:', error);
-            // Continue with deletion process despite Autumn failure
+          const customer = await context.var.autumn.customers.get(user.id);
+          if (customer.data) {
+            try {
+              await Promise.all(
+                customer.data.products.map(async (product) =>
+                  context.var.autumn.cancel({
+                    customer_id: user.id,
+                    product_id: product.id,
+                  }),
+                ),
+              );
+            } catch (error) {
+              console.error('Failed to delete Autumn customer:', error);
+            }
           }
 
           const revokedAccounts = (
